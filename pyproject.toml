@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "ecoloop-ghgia"
+version = "0.1.0"
+description = ""
+authors = ["YSAP"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+

@@ -1,0 +1,565 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider  = "prisma-client-py"
+  interface = "asyncio"
+}
+
+model IOrganization {
+  sid                 Int      @default(autoincrement())
+  uid                 String   @db.VarChar(40) @id @default(uuid())
+  createdByUid        String   @db.VarChar(40)
+  dateCreated         DateTime @default(now())  // When the event was created
+  dateModified        DateTime? // modify_date
+  dateDeleted         DateTime?
+  deleteFlag          Boolean  @default(false)
+  dateLastAccessed    DateTime? // Last time this Org was viewed
+
+  settings            Json? // Json structure settings
+  additionalProps     Json? // DART: ceo_nm, corp_cls, jurir_no, ir_url, induty_code
+  notes               String?
+
+  // { [langCode]: { [fieldName]: translation} }
+  translations        Json?
+
+  // 3=public accessible, 2=restricted (registered user) with comment, 1=restricted 0=private
+  accessLevel         Int?     @default(0) // Accessible globally or internally
+
+  /// disabled, in-operation, reporting
+  status              String?  @db.VarChar
+
+  /// When true, user cannot modify any of the organization's setup data (e.g. Site config, Facility config, etc.)
+  isLocked            Boolean  @default(false)
+
+  /// The external reference ID (e.g. from tenant's ERP systems' ID). To avoid collision use {orgId}:{refId}
+  erefId              String?  @db.VarChar @unique // ${dartId:corp_code}
+
+  type                String   @db.VarChar // consulting, verification, corporation, government, educational
+  id                  String   @db.VarChar @unique /// The globally identifier compatible with unix format  
+
+  /// 할당대상여부(Y/N)
+  isSubjectRegulation   Boolean?
+  applicableRegulations String[] // ETS, Target
+
+  latitude            Float?
+  longitude           Float?
+
+  addressCountryId    String  @db.VarChar(12)   // country code
+  
+  // 2023.07.17
+  addressRegionName   String?  @db.VarChar
+  addressRegionUid    String?  @db.VarChar
+  addressRegion       Region?  @relation(fields: [addressRegionUid], references: [uid], onDelete: SetNull)
+
+  /// County (Orange County). 구 (강동구)
+  addressSubRegion    String? @db.VarChar
+  /// City (Mountain View). 동 (성내동)
+  addressLocality     String?  @db.VarChar
+  postalCode          String?  @db.VarChar
+  streetAddress       String?  @db.VarChar // DART: adres
+
+  email               String?  @db.VarChar
+  faxNumber           String?  @db.VarChar  // DART: fax_no
+  foundingDate        String?  @db.VarChar  // DART: est_dt
+  legalName           String   // DART: corp_name
+  legalNameEng        String?  // DART: corp_name_eng
+
+  // Branding  
+  logoUrl             String?   @db.VarChar
+  coverImageUrl       String?   @db.VarChar
+  headline            String?   @db.VarChar
+  subheadline         String?   @db.VarChar
+  tagline             String?   @db.VarChar
+  slogan              String?
+  // { [pageId: string]: {[contentId: string]}}
+  pageSetup           Json?  /// Page UI setup, e.g. content to be displayed
+
+  taxID               String?  @db.VarChar
+  telephone           String?  @db.VarChar // DART: phn_no
+  website             String?  @db.VarChar // DART: hm_url
+
+  // Properites from Corporation
+  tickerSymbol        String?  @db.VarChar // DART: stock_code
+  brand               String?  @db.VarChar // 
+
+  // Properties from Thing
+  description         String?  /// Full description with HTML support
+  /// Short description of the organization, to be used in meta description
+  summary             String?  
+  keywords            String?
+
+  /// 사업자 등록번호 (registration number) 
+  registNumber        String?  @db.VarChar // DART: businessRegistNum
+
+  /// 기타 고유 번호
+  identifier          String?  @db.VarChar
+
+  /// 일반적인 사업명 (이름)
+  name                String?  @db.VarChar
+
+  // Additional: provider fields
+  offerings           String?
+  solutions           String?
+  history             String?
+  certifications      Json?
+
+  // Additional: NGMS fields
+
+  /// 업종
+  sectorUid           String?  @db.VarChar(40)
+  sector              Sector?  @relation(fields: [sectorUid], references: [uid])
+
+  specialties         String[] // tags of words: 
+
+  /// 대표자
+  legalRepName        String?  @db.VarChar
+
+  managerName         String?  @db.VarChar
+
+  /// 주요 생산제품 또는 처리물질
+  mainProcessing      String? 
+
+  /// 자본금
+  capital             Int?
+
+  /// 면적 (m2), null 일 경우 sum(OrgSite.floorArea)
+  floorArea           Int? 
+
+  /// 종업원수
+  numEmployees        Int?
+
+  // 중소기업여부 ('S'일 경우 중소기업여부를 Y로 표시)
+  sizeCategory        String? @db.VarChar(6)
+
+  /// 조직경계 설명
+  orgBoundary         String?
+
+  /// Date (periodStartDt) of the first Activity Data 
+  // firstDataEntryDt DateTime?
+  firstPeriodStartDt  DateTime?
+
+  /// Date (periodEndDt) of the last Activity Data 
+  // lastDataEntryDt  DateTime?
+  lastPeriodEndDt     DateTime?
+
+  features            Json?
+
+  sites               IOrgSite[]
+  financials          IFinancial[]
+
+  @@index([erefId])
+  @@index([id])
+  @@index([type])
+  @@index([registNumber])
+  @@index([identifier])
+  @@index([sectorUid])
+  @@index([addressRegionUid])
+  @@index([addressCountryId, addressLocality])
+}
+
+model IOrgSite {
+  sid                   Int       @default(autoincrement())
+  uid                   String    @id @default(uuid()) @db.VarChar(40)
+  createdByUid          String?   @db.VarChar(40)
+  dateCreated           DateTime  @default(now()) // When the event was created
+  dateModified          DateTime? // When the event was last modified
+  dateDeleted           DateTime?
+  deleteFlag            Boolean   @default(false)
+
+  settings              Json?   @default("{}") // Json structure setting
+  additionalProps       Json?   @default("{}") // aka additionalAttributes
+  notes                 String?
+
+  complexName                String?  @db.VarChar // 단지명
+  companyName                String?  @db.VarChar  //  회사명
+  factoryManagementNumber    String?   //  공장관리번호
+
+  addressRegionName          String?  @db.VarChar // (FKA: province) 시도
+  addressRegionUid           String?   @db.VarChar
+  addressRegion              Region?   @relation(fields: [addressRegionUid], references: [uid], onDelete: SetNull)
+
+  /// County (Orange County). 구 (강동구)
+  addressSubRegion           String?  @db.VarChar // KFA: cityDistrict, 시군구
+  /// City (Mountain View). 동 (성내동)
+  addressLocality            String?  @db.VarChar
+  postalCode                 String?  @db.VarChar
+  streetAddress              String?  @db.VarChar  // 공장대표주소(도로)
+  landAddress                String?  @db.VarChar  //  공장대표주소(지번)
+
+  structuredAddress          String?  //  도/시군구
+
+  businessRegistrationNum    String?  @db.VarChar  //  사업자등록번호
+  sectorIdVersion            Int?     //  대표업종차수
+  sectorIdMain               String?  //  대표업종번호
+  sectorIds                  String?  @db.VarChar  //  업종번호
+  sectorNames                String?  @db.VarChar  //  업종명
+  establishmentType          String?  @db.VarChar  //  설립구분
+  propertyResidence          String?  @db.VarChar  //  입주형태: 일반토지, 임대사업자
+  propertyOwnership          String?  @db.VarChar  //  보유구분: 자가, 임대
+  approvalDateInitial        DateTime?  //  최초승인일
+  approvalDate               DateTime?  //  승인일
+  registrationType           String?  @db.VarChar  //  등록구분
+  registrationDateInitial    DateTime? //  최초등록일
+  registrationDate           DateTime? //  
+  businessType               String?  @db.VarChar  //  사업유형: 제조업
+  phoneNumber                String?  @db.VarChar  //  
+  
+  numEployeesMale            Int?  //  
+  numEployeesFemale          Int?  //  
+  numEployeesForeignMale     Int?  //  
+  numEployeesForeignFemale   Int?  //  
+  numEmployeesTotal          Int?  //  
+  
+  products                   String?  @db.VarChar  //  생산품
+  mainRawMaterials           String?  @db.VarChar  //  주원자재
+  sizeCategory               String?  @db.VarChar  //  (FKA: factorySize) 공장크기: 소기업
+  zoneType                   String?  @db.VarChar  //  용도지역: 도시지역/공업지역/일반공업지역
+  landType                   String?  @db.VarChar  //  지목: 대, 잡종지, 공장용지
+  
+  landArea                   Float?  //  용지면적
+  manufacturingFacilityArea  Float?  //  제조시설면적
+  auxiliaryFacilityArea      Float?  //  부대시설면적
+  buildingArea               Float?  //  건축면적
+  
+  airQualityGrade            String?  @db.VarChar  //  대기등급
+  waterQualityGrade          String?  @db.VarChar  //  수질등급
+  noiseVibrationStatus       String?  @db.VarChar  //  소음/진동여부
+  livingWaterUsage           Float?  //  생활용수
+  industrialWaterUsage       Float?  //  산업용수
+  electricity                Float?  //  전력
+  oil                        Float?  //  석유
+  gas                        Float?  //  가스
+  others                     Float?  //  기타
+  
+  dataSource                 String  //  FKA fileName
+  keyHash                    String   @unique @db.VarChar  //  
+  
+  organizationUid            String?  @db.VarChar  //  
+  organization               IOrganization?  @relation(fields: [organizationUid], references: [uid], onDelete: SetNull)  //  
+
+  addressDetails             Json?    @default("{}")  //  FKA addressDetails, pulled from Address API
+
+  siteCategoryRels           ISiteCategoryRel[]  //  
+
+  @@index([uid])
+}
+
+model ISiteCategoryRel {
+  sid                         Int       @default(autoincrement())
+  uid                         String    @id @default(uuid()) @db.VarChar(40)
+  createdByUid                String?   @db.VarChar(40)
+  dateCreated                 DateTime  @default(now()) // When the event was created
+  dateModified                DateTime? // When the event was last modified
+  dateDeleted                 DateTime?
+  deleteFlag                  Boolean   @default(false)
+
+  settings                    Json?   @default("{}") // Json structure setting
+  additionalProps             Json?   @default("{}") // aka additionalAttributes
+  notes                       String?
+
+  organizationUid             String @db.VarChar
+  siteUid                     String? @db.VarChar
+  site                        IOrgSite? @relation(fields: [siteUid], references: [uid], onDelete: SetNull)
+
+  siteAddress                 String? @db.VarChar
+  categoryUid                 String? @db.VarChar
+  categoryName                String? // The name of the IPCC Category (e.g. 2.A.1)
+
+  sectorId                    String? @db.VarChar
+  product                     String? @db.VarChar
+  regionUid                   String? @db.VarChar
+  region                      Region? @relation(fields: [regionUid], references: [uid], onDelete: SetNull)
+  addressDetail               Json?   @default("{}")
+  structuredAddress           String? @db.VarChar
+
+  isMainSector                Boolean @default(false)
+  contributionMagnitudeSector Float?
+  contributionRatio           Float?
+
+
+  @@unique([siteUid, sectorId])
+  @@index([categoryName])
+}
+
+model IEmissionData {
+  sid                 Int      @default(autoincrement())
+  uid                 String   @db.VarChar(40) @id @default(uuid())
+  createdByUid        String   @db.VarChar(40)
+  dateCreated         DateTime @default(now())  // When the event was created
+  dateModified        DateTime? // When the event was last modified
+  dateDeleted         DateTime?
+  deleteFlag          Boolean  @default(false)
+
+  settings            Json? // Json structure setting
+  additionalProps     Json? // aka additionalAttributes
+  /// Any notes or remarks (by user)
+  notes               String?
+
+  status              String?  @db.VarChar
+  // TODO: sourceProvider      String?  @db.VarChar /// Where the source was provided: e.g. GIR
+  source              String?  @db.VarChar /// The source of the data, e.g. GIR-2024.xls
+  uncertainty         Float?
+
+  /// Discrete category for analysis slice & dicing
+  categoryName        String?  @db.VarChar
+  categoryUid         String?  @db.VarChar
+  // category            Code?    @relation(fields: [categoryUid], references: [uid], onDelete: SetNull)
+
+  countryId           String?  @db.VarChar
+  /// Name of the region, may be a region not defined in the sector table
+  regionName          String?  @db.VarChar
+  regionUid           String?  @db.VarChar
+  region              Region?  @relation(fields: [regionUid], references: [uid], onDelete: SetNull)
+
+  latitude            Int?
+  longitude           Int?
+
+  /// Name of the sector, may be a sector not defined in the sector table
+  sectorName          String?  @db.VarChar
+  sectorUid           String?  @db.VarChar
+  sector              Sector?  @relation(fields: [sectorUid], references: [uid], onDelete: SetNull)
+
+  organizationUid     String?  @db.VarChar
+  siteUid             String?  @db.VarChar
+
+  periodLength	      String   @db.VarChar(10) 
+  periodStartDt	      DateTime
+  periodEndDt	        DateTime
+
+  pollutantId         String?  @db.VarChar /// pollutant: co2eq, co2, ch4, n2o, nox, sox, etc.
+  emissionDirect      Float?
+  emissionElec        Float?
+  emissionSteam       Float?
+  emissionOthers      Json?
+  emissionTotal       Float
+
+  // TODO: add pollutantId in 
+  @@unique([periodStartDt, periodEndDt, regionUid, categoryUid, pollutantId])
+
+  // TODO: add index - @@unique([periodStartDt, periodEndDt, latitude, longitude, pollutantId, categoryUid])
+  @@index([status])
+  @@index([source])
+  @@index([categoryUid])
+  @@index([countryId])
+  @@index([regionName])
+  @@index([regionUid])
+  @@index([sectorName])
+  @@index([sectorUid])
+  @@index([organizationUid])
+  @@index([siteUid])
+  @@index([periodStartDt])
+  @@index([periodEndDt])
+  @@index([pollutantId])
+}
+
+model IFinancial {
+  sid               Int       @default(autoincrement())
+  uid               String    @id @default(uuid()) @db.VarChar(40)
+  createdByUid      String?   @db.VarChar(40)
+  dateCreated       DateTime  @default(now()) // When the event was created
+  dateModified      DateTime? // When the event was last modified
+  dateDeleted       DateTime?
+  deleteFlag        Boolean   @default(false)
+  
+  settings          Json? // Json structure setting
+  additionalProps   Json? // aka additionalAttributes
+  notes             String?
+  
+  rceptNum          String? @db.VarChar  
+  reportCode        String? @db.VarChar 
+  bsnsYear          String? @db.VarChar 
+  dartId            String? @db.VarChar 
+  stockCode         String? @db.VarChar 
+  fsDiv             String? @db.VarChar 
+  fsName            String? @db.VarChar 
+  sjDiv             String? @db.VarChar 
+  sjNm              String? @db.VarChar 
+  accountName       String? @db.VarChar 
+  termName          String? @db.VarChar 
+  termStart         DateTime?
+  termEnd           DateTime?
+  amount            Float? 
+  accumAmount       Float? 
+  currency          String? @db.VarChar
+  ord               String? @db.VarChar
+
+  organizationUid   String?  @db.VarChar  //  
+  organization      IOrganization?  @relation(fields: [organizationUid], references: [uid], onDelete: SetNull)  //  
+}
+
+
+model Code {
+  sid               Int      @default(autoincrement())
+  uid               String   @db.VarChar(40) @id @default(uuid())
+  createdByUid      String   @db.VarChar(40)
+  dateCreated       DateTime @default(now())  // When the event was created
+  dateModified      DateTime? // When the event was last modified
+  dateDeleted       DateTime?
+  deleteFlag        Boolean  @default(false)
+  settings          Json?   // Json structure setting
+  additionalProps   Json?   // aka additionalAttributes
+  notes             String?
+
+  // { [langCode]: { [fieldName]: translation} }
+  translations      Json?
+
+  // ADDED: 20230827
+  status            String?  @db.VarChar /// active, disabled, 
+
+  region            String?  @db.VarChar
+  organizationUid   String?  @db.VarChar(40)
+
+  // NEW: 230114 type of pollutantType: ghg, se, etc.
+  tag               String?  @db.VarChar
+  
+  /// E.g.: activitytype, facilitytype, sourcesinkcategory. (예: 배출활동)
+  type              String   @db.VarChar(20)
+  group             String?
+  code              String   @db.VarChar(30)
+
+  // idientifier in unix compatible name
+  id                String?  @db.VarChar
+  name              String   @db.VarChar
+
+  // Usually for GHG scope: 1, 2, 3
+  scope             String?  @db.VarChar(20)
+  
+  // Usually for GHG category: 1 ~ 15
+  category          String?  @db.VarChar
+  description        String?
+  
+  // 2023.07.17
+  parentUid          String?   @db.VarChar
+  parent             Code?   @relation("codeChildren", fields: [parentUid], references: [uid])
+  children           Code[]  @relation("codeChildren")
+  treeDepth          Int?
+
+  @@unique([region, type, code])
+  @@unique([region, type, id])
+  @@index([status])
+  @@index([tag])
+  @@index([type])
+  @@index([group])
+  @@index([code])
+  @@index([id])
+  @@index([scope])
+  @@index([category])
+}
+
+model Region {
+  sid                Int       @default(autoincrement())
+  uid                String    @db.VarChar(40) @id @default(uuid())
+  createdByUid       String    @db.VarChar(40)
+  dateCreated        DateTime  @default(now())  // When the event was created
+  dateModified       DateTime? // When the event was last modified
+  dateDeleted        DateTime?
+  deleteFlag         Boolean  @default(false)
+
+  settings           Json? // Json structure setting
+  /// Any additional properties such as calling code (see https://countrycode.org/)
+  additionalProps    Json? 
+  notes              String?
+
+  // { [langCode]: { [fieldName]: translation} }
+  translations       Json?
+
+  countryId          String?  @db.VarChar
+
+  // Type of region. E.g. continent, country, province, district, etc.
+  type               String   @db.VarChar(12) 
+
+  /// ISO: alpha-2, E.g.: kr. For sub regions, hyphenate parent region id. E.g.: kr-sel
+  id                 String   @db.VarChar(60) 
+
+  /// ISO: alpha-3, E.g.: kor
+  code               String?  @db.VarChar(20) 
+
+  /// Code in numeric format. M49 for regions and countries, X000 for other sub-areas without startard number code
+  digitCode          String?    
+
+  name               String  @db.VarChar// Korea, Republic of
+
+  // Name in national language, e.g.: 대한민국
+  name_nl            String?  @db.VarChar
+  description        String?
+
+  languages          String[]  @db.VarChar(50) // First is the official
+  currencyUnitId     String?   @db.VarChar
+  timezone           String?   @db.VarChar(50)
+
+  coordNorth         Float? // North most point
+  coordSouth         Float? // South most point
+  coordEast          Float? // East most point
+  coordWest          Float? // West most point
+  latitude           Float? // Longitude average
+  longitude          Float? // Latitude average
+  area               Float? // km2
+  population         Int? 
+  populationYear     Int? 
+  
+  parentUid          String?   @db.VarChar(40) 
+  parent             Region?   @relation("regionChildren", fields: [parentUid], references: [uid])
+  children           Region[]  @relation("regionChildren")
+
+  organizations          IOrganization[]
+  orgSites               IOrgSite[]
+  siteCategoryRel        ISiteCategoryRel[]
+  emissions              IEmissionData[]
+
+  @@unique([type, id])
+  @@unique([parentUid, id])
+  @@unique([parentUid, code])
+  @@index(countryId)
+  @@index(type)
+  @@index(id)
+  @@index(code)
+  @@index(digitCode)
+}
+
+model Sector {
+  sid               Int       @default(autoincrement())
+  uid               String    @db.VarChar(40) @id @default(uuid())
+  createdByUid      String    @db.VarChar(40)
+  dateCreated       DateTime  @default(now())  // When the event was created
+  dateModified      DateTime? // When the event was last modified
+  dateDeleted       DateTime?
+  deleteFlag        Boolean  @default(false)
+
+  /// Any additional settings or attributes that can be used as discriminator for calculation rule
+  settings          Json?     
+  additionalProps   Json? // aka additionalAttributes
+  notes             String?
+
+  // { [langCode]: { [fieldName]: translation} }
+  translations      Json?
+
+  // ADDED: 20230827
+  status            String?  @db.VarChar /// active, disabled, 
+
+  // The region which this sector is applicable: countryId or legislative region (e.g. eu)
+  region            String    @db.VarChar 
+  id                String?   @db.VarChar // region + code
+  code              String    @db.VarChar
+  name              String    @db.VarChar
+  description       String?
+  industries        String[]  // Industry this sector is associated to
+  industries_nl     String?   // Industry in (original) native language
+  
+  parentUid         String?   @db.VarChar(40) 
+  parent            Sector?   @relation("sectorChildren", fields: [parentUid], references: [uid])
+  children          Sector[]  @relation("sectorChildren")
+
+  organizations     IOrganization[]
+
+  sectors           IEmissionData[]
+  
+  @@unique([region, code])
+  @@unique([parentUid, id])
+  @@unique([parentUid, code])
+}

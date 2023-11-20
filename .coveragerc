@@ -1,0 +1,7 @@
+[run]
+OMIT = test.py
+    main.py
+    test/*
+
+[report]
+show_missing = True

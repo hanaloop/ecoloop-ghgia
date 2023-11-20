@@ -1,0 +1,10 @@
+__pycache__/
+.coverage
+
+
+# Local Secrets
+**/_secrets
+
+# Personal scratch notes
+**/_scratch*
+
