@@ -13,7 +13,6 @@ app = FastAPI()
 
 @app.get("/api/info")
 async def info():
-    # Method can be either "armia" or "auto_arima"
     return "Hello World"
 
 
