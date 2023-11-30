@@ -1,8 +1,9 @@
 import os
 import sys
 import time
+from deprecated import deprecated
 
-@DeprecationWarning("Timer is deprecated, use tqdm instead.")
+@deprecated("Timer is deprecated, use tqdm instead.")
 class Timer:
     def __init__(self, total_operations:int) -> None:
         self.total_operations = total_operations

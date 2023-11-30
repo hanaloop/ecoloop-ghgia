@@ -16,6 +16,11 @@ python-levenshtein = "^0.23.0"
 typing-extensions = "^4.8.0"
 xlrd = "^2.0.1"
 uvicorn = "^0.24.0.post1"
+asyncio = "^3.4.3"
+poetry-dotenv-plugin = "^0.2.0"
+tqdm = "^4.66.1"
+deprecated = "^1.2.14"
+python-multipart = "^0.0.6"
 
 [tool.poetry.dev-dependencies]
 

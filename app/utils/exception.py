@@ -1,5 +1,5 @@
 class CustomException(Exception):
-    def __init__(self, data, original_exception: Exception):
+    def __init__(self, original_exception: Exception, data = None, ):
         self.data = data
         self.original_exception = original_exception
 
