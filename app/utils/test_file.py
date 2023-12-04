@@ -1,61 +1,64 @@
-from typing_extensions import Buffer
 import pytest
-from unittest.mock import MagicMock
 import pandas as pd
-import pytest_asyncio
+from unittest.mock import MagicMock, mock_open
+from io import StringIO
+from app.utils.file import FileUtils  # Replace with the correct import for FileUtils
 
-from app.utils.file import read_to_pd
+@pytest.mark.asyncio
+async def test_read_csv_to_pd():
+    mock_file_content = "col1,col2\nval1,val2"
+    mock_file = StringIO(mock_file_content)
 
-@pytest.fixture
-def buffer():
-    return MagicMock()
-
-@pytest.fixture
-def path():
-    return "path/to/excel.xlsx"
-
-@pytest_asyncio.fixture
-async def test_read_csv_with_buffer(buffer):
-    # Test reading CSV with buffer
-    df = pd.DataFrame([["a", "b"], ["c", "d"]], columns=["col1", "col2"])
-    buffer.read_excel.return_value = df
-
-    result = await read_to_pd(buffer=buffer)
-
-    assert result.equals(df)
-
-@pytest_asyncio.fixture
-async def test_read_csv_with_path(path):
-    # Test reading CSV with path
-    df = pd.DataFrame([["a", "b"], ["c", "d"]], columns=["col1", "col2"])
-    pd.read_excel.return_value = df
-
-    result = await read_to_pd(path=path)
-
-    assert result.equals(df)
-
-@pytest_asyncio.fixture
-async def test_read_excel_with_buffer(buffer: Buffer):
-    # Test reading Excel with buffer
-    df = pd.DataFrame([["a", "b"], ["c", "d"]], columns=["col1", "col2"])
-    buffer.read_excel.return_value = df
-
-    result = await read_to_pd(buffer=buffer)
-
-    assert result.equals(df)
-
-@pytest_asyncio.fixture
-async def test_read_excel_with_path(path):
-    # Test reading Excel with path
-    df = pd.DataFrame([["a", "b"], ["c", "d"]], columns=["col1", "col2"])
-    pd.read_excel.return_value = df
-
-    result = await read_to_pd(path=path)
-
-    assert result.equals(df)
-
-@pytest_asyncio.fixture
-async def test_invalid_arguments(buffer, path):
-    # Test raising an exception when both buffer and path are provided
+    file_utils = FileUtils()
     with pytest.raises(Exception):
-        await read_to_pd(buffer=buffer, path=path)
+        # Test with neither file nor path
+        await file_utils.read_to_pd(file_type="csv")
+
+    with pytest.raises(Exception):
+        # Test with both file and path
+        await file_utils.read_to_pd(file_type="csv", file=mock_file, path="dummy/path")
+
+    # Test with only file
+    df = await file_utils.read_csv_to_pd(mock_file)
+    assert isinstance(df, pd.DataFrame)
+    assert not df.empty
+
+@pytest.mark.asyncio
+async def test_read_excel_to_pd(mocker):
+    mocker.patch("pandas.read_excel", return_value=pd.DataFrame())
+    file_utils = FileUtils()
+    df = await file_utils.read_excel_to_pd("dummy/path")
+    assert isinstance(df, pd.DataFrame)
+
+@pytest.mark.asyncio
+async def test_read_xml_to_pd(mocker):
+    mocker.patch("pandas.read_xml", return_value=pd.DataFrame())
+    file_utils = FileUtils()
+    df = await file_utils.read_xml_to_pd("dummy/path")
+    assert isinstance(df, pd.DataFrame)
+
+@pytest.mark.asyncio
+async def test_read_to_pd_file_type_routing(mocker):
+    mocker.patch("pandas.read_csv", return_value=pd.DataFrame())
+    mocker.patch("pandas.read_excel", return_value=pd.DataFrame())
+    mocker.patch("pandas.read_xml", return_value=pd.DataFrame())
+
+    mock_file = StringIO("dummy content")
+
+    file_utils = FileUtils()
+
+    # Test CSV
+    df_csv = await file_utils.read_to_pd(file_type="csv", file=mock_file)
+    assert isinstance(df_csv, pd.DataFrame)
+
+    # Test XLSX
+    df_xlsx = await file_utils.read_to_pd(file_type="xlsx", path="dummy/path")
+    assert isinstance(df_xlsx, pd.DataFrame)
+
+    # Test XML
+    df_xml = await file_utils.read_to_pd(file_type="xml", path="dummy/path")
+    assert isinstance(df_xml, pd.DataFrame)
+
+    # Test for invalid file type
+    with pytest.raises(Exception):
+        await file_utils.read_to_pd(file_type="invalid", path="dummy/path")

@@ -1,9 +1,8 @@
-from fastapi import APIRouter, UploadFile
-import prisma
-from iorgsites.service import FactoryOnSiteService
+from fastapi import APIRouter, UploadFile, HTTPException
+from app.iorgsites.service import iOrgSiteService
 
 
-service = FactoryOnSiteService()
+service = iOrgSiteService()
 router = APIRouter(
     prefix="/api/iorgsites",
     tags=["iorgsites"],
@@ -12,7 +11,6 @@ router = APIRouter(
 @router.get("/")
 async def get():
     return await service.fetch_all()
-
 
 @router.get("/count")
 async def count():
@@ -26,9 +24,9 @@ async def paged(skip: int = 0, limit: int = 10):
 async def group(count=None, by = None, sum = None, order = None, having = None):
     return await service.group_by(count = count, by = by, sum = sum, order = order, having = having)
 
-@router.get("/{id}")
-async def get_by_id(id):
-    return await service.fetch_some(where={"id": id})
+@router.get("/{uid}")
+async def get_by_id(uid):
+    return await service.fetch_some(where={"uid": uid})
 
 @router.delete("/") ##TODO: Need auth
 async def delete(where = None):

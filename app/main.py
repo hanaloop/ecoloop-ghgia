@@ -2,8 +2,9 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
-from iorgsites import router as iorgsites
-from database import  get_connection
+from app.iorganizations import router as iorganizations
+from app.iorgsites import router as iorgsites
+from app.database import  get_connection
 
 client = get_connection()
 
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(iorgsites.router)
+app.include_router(iorganizations.router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=9090,)

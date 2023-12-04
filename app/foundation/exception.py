@@ -1,5 +1,7 @@
 import asyncio
 import functools
+import sys
+import traceback
 
 class CatchError:
     def __init__(self, func):
@@ -16,13 +18,21 @@ class CatchError:
         try:
             return await self.wrapped_func(*args, **kwargs)
         except Exception as e:
-            print(f"An error occurred in async function {self.wrapped_func.__name__}: {e} at line {e.__traceback__.tb_lineno}")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tb_details = traceback.extract_tb(exc_traceback)[-1]
+            filename = tb_details.filename
+            line_number = tb_details.lineno
+            print(f"An error occurred in function {self.wrapped_func.__name__}: {e} at line {line_number} in file {filename}")
 
     def sync_wrapper(self, *args, **kwargs):
         try:
             return self.wrapped_func(*args, **kwargs)
         except Exception as e:
-            print(f"An error occurred in function {self.wrapped_func.__name__}: {e} at line {e.__traceback__.tb_lineno}")
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tb_details = traceback.extract_tb(exc_traceback)[-1]
+            filename = tb_details.filename
+            line_number = tb_details.lineno
+            print(f"An error occurred in function {self.wrapped_func.__name__}: {e} at line {line_number} in file {filename}")
 
     def __get__(self, instance, owner):
         if instance is None:
