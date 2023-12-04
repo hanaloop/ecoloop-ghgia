@@ -14,7 +14,7 @@ generator client {
 model IOrganization {
   sid                 Int      @default(autoincrement())
   uid                 String   @db.VarChar(40) @id @default(uuid())
-  createdByUid        String   @db.VarChar(40)
+  createdByUid        String?   @db.VarChar(40)
   dateCreated         DateTime @default(now())  // When the event was created
   dateModified        DateTime? // modify_date
   dateDeleted         DateTime?
@@ -40,8 +40,8 @@ model IOrganization {
   /// The external reference ID (e.g. from tenant's ERP systems' ID). To avoid collision use {orgId}:{refId}
   erefId              String?  @db.VarChar @unique // ${dartId:corp_code}
 
-  type                String   @db.VarChar // consulting, verification, corporation, government, educational
-  id                  String   @db.VarChar @unique /// The globally identifier compatible with unix format  
+  type                String   @db.VarChar @default("default") // consulting, verification, corporation, government, educational
+  id                  String?   @db.VarChar @unique /// The globally identifier compatible with unix format  
 
   /// 할당대상여부(Y/N)
   isSubjectRegulation   Boolean?
@@ -50,7 +50,7 @@ model IOrganization {
   latitude            Float?
   longitude           Float?
 
-  addressCountryId    String  @db.VarChar(12)   // country code
+  addressCountryId    String?  @db.VarChar(12)   // country code
   
   // 2023.07.17
   addressRegionName   String?  @db.VarChar
@@ -164,17 +164,17 @@ model IOrganization {
 }
 
 model IOrgSite {
-  sid                   Int       @default(autoincrement())
-  uid                   String    @id @default(uuid()) @db.VarChar(40)
-  createdByUid          String?   @db.VarChar(40)
-  dateCreated           DateTime  @default(now()) // When the event was created
-  dateModified          DateTime? // When the event was last modified
-  dateDeleted           DateTime?
-  deleteFlag            Boolean   @default(false)
-
-  settings              Json?   @default("{}") // Json structure setting
-  additionalProps       Json?   @default("{}") // aka additionalAttributes
-  notes                 String?
+  sid                        Int       @default(autoincrement())
+  uid                        String    @id @default(uuid()) @db.VarChar(40)
+  createdByUid               String?   @db.VarChar(40)
+  dateCreated                DateTime  @default(now()) // When the event was created
+  dateModified               DateTime? // When the event was last modified
+  dateDeleted                DateTime?
+  deleteFlag                 Boolean   @default(false)
+    
+  settings                   Json?   @default("{}") // Json structure setting
+  additionalProps            Json?   @default("{}") // aka additionalAttributes
+  notes                      String?
 
   complexName                String?  @db.VarChar // 단지명
   companyName                String?  @db.VarChar  //  회사명
