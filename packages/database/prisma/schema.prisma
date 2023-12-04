@@ -248,6 +248,7 @@ model IOrgSite {
   siteCategoryRels           ISiteCategoryRel[]  //  
 
   @@index([uid])
+  @@index([keyHash])
 }
 
 model ISiteCategoryRel {

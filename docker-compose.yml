@@ -12,7 +12,7 @@ volumes:
 
 services:
   postgres:
-    image: postgres:15.3-alpine3.18
+    image: postgres:16.1-alpine3.18
     container_name: postgres-kcp
     # command: postgres -c 'max_connections=200' -c 'shared_buffers=256MB'
     networks:

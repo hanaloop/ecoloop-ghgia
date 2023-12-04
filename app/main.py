@@ -1,34 +1,26 @@
-from typing import List, Dict, Optional
 
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 import uvicorn
-
-from pydantic import BaseModel
-from iorgSites import router as iOrgSites
+from iorgsites import router as iorgsites
 from database import  get_connection
 
-app = FastAPI()
 client = get_connection()
 
-app.include_router(iOrgSites.router)
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Connecting to database...")
+    get_connection()
     await client.connect()
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     await client.disconnect()
 
-@app.get("/api/info")
-async def info():
-    return "api is running"
-
-
-
+app = FastAPI(lifespan=lifespan)
+app.include_router(iorgsites.router)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=9090)
+    uvicorn.run(app, host="127.0.0.1", port=9090,)
 
 """
 run for development (auto-reload)

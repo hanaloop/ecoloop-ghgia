@@ -57,3 +57,7 @@ TBD:
     ```bash
     uvicorn main:app --reload --port 9090
     ```
+
+
+
+. run tests with ```python -m pytest```

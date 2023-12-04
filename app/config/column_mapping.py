@@ -1,4 +1,4 @@
-factory_map = {
+iorgsite_map = {
     "단지명": "complexName",
     "회사명": "companyName",
     "공장관리번호": "factoryManagementNumber",
@@ -45,26 +45,25 @@ factory_map = {
     "가스": "gas",
     "기타": "others"
 }
-company_map = {
+iorganization_map = {
     "status": "에러 및 정보 코드",
     "modify_date":"dateModified",
-    "message": "에러 및 정보 메시지",
-    "corp_code": "dartId",
-    "corp_name": "corpName",
-    "corp_name_eng": "corpNameEng",
+    "corp_code": "erefId",
+    "corp_name": "legalName",
+    "corp_name_eng": "legalNameEng",
     "stock_name": "stockName",
-    "stock_code": "stockCode",
+    "stock_code": "tickerSymbol",
     "ceo_nm": "ceoName",
     "corp_cls": "corpClass",
     "jurir_no": "corpRegistNum",
-    "bizr_no": "businessRegistNum",
-    "adres": "address",
+    "bizr_no": "registNumber",
+    "adres": "streetAddress",
     "hm_url": "hompage",
-    "ir_url": "hompageIr",
-    "phn_no": "phoneNum",
-    "fax_no": "faxNum",
+    "ir_url": "website",
+    "phn_no": "telephone",
+    "fax_no": "faxNumber",
     "induty_code": "industryCode",
-    "est_dt": "establishDate"
+    "est_dt": "foundingDate"
 }
 
 financial_map = {
