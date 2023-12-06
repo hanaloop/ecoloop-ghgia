@@ -2,18 +2,18 @@ from typing_extensions import Buffer
 import hashlib
 import numpy as np
 from tqdm import tqdm
-from utils.file import read_to_pd
+from app.utils.file import FileUtils
 import prisma
-from utils.file_type import return_list
-from database import get_connection
-from config.column_mapping import iorgsite_map
+from app.utils.file_type import return_list
+from app.database import get_connection
+from app.config.column_mapping import iorgsite_map
 import pandas as pd
 from app.foundation.exception import CatchError
 
 ##Using service directly causes circular import error
 
 
-class FactoryOnSiteService:
+class iOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
 
@@ -54,7 +54,7 @@ class FactoryOnSiteService:
         where: prisma.types.IOrgSiteWhereUniqueInput,
         include=None,
     ):
-        await self.prisma.iorgsite.upsert(data=data, where=where)
+        await self.prisma.iorgsite.upsert(data={"create": data, "update": data}, where=where)
         """
         Upserts an organization site in the database.
 
@@ -289,7 +289,8 @@ class FactoryOnSiteService:
         Returns:
             None
         """
-        source = await read_to_pd(buffer=buffer, path=path)
+        files = FileUtils()
+        source = await files.read_to_pd(data_source, file=buffer, path=path)
         source["dataSource"] = data_source
         source = self.transform_data(source)
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)

@@ -9,55 +9,39 @@ Ecoloop microservice for Greenhouse Gas Emission Inventory Analysis
 - python
 - fastapi
 - pandas
+- pytest
+- asyncio
 
 ## Install
 
-TBD:
-
-### Using Docker
-
-* Build docker image
-
-    ```bash
-    # Usie script
-    ./docker --build
-    # Or build it manually
-    docker build -t ecoloop-platform/ecoloop-ghgia .
-    ```
-
-* Run application from docker
-
-    ```bash
-    docker run --rm --name ecoloop-ghgia  -p 9090:9090 ecoloop-platform/ecoloop-ghgia-arm:latest
-    ```
-
-### Manual Setup
+Using Docker
 
 * Install poetry package manager (see [official doc](https://python-poetry.org/docs/))
 
-    ```bash
-    curl -sSL https://install.python-poetry.org | python3 -
-    source ~/.poetry/env
-    ```
-
+  ```bash
+  curl -sSL https://install.python-poetry.org | python3 -
+  source ~/.poetry/env
+  ```
 * Install dependency packages
 
-    ```bash
-    poetry install
-    ```
+  ```bash
+  poetry install
+  ```
+* Start docker container
 
+  ```bash
+  docker compose up
+  ```
 * Run server
 
-    ```bash
-    python main.py
-    ```
+  ```bash
+  uvicorn app.main:app --reload --port 9090
+  ```
+* Run tests
 
-    or run by `uvicorn` with reload option for easy development
+  ```bash
+  python3 -m pytest
+  ```
+* Usage
 
-    ```bash
-    uvicorn main:app --reload --port 9090
-    ```
-
-
-
-. run tests with ```python -m pytest```
+The api can be accessed at ``http://localhost:9090/docs``. You can upload iorgsites using the ``/api/iorgsites/upload`` endpoint. The data can also be read from a local file, by providing a path to the file. This can only be done by creating a script that directly imports and runs the service, since python packages cannot be directly executed.

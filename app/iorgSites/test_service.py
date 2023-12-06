@@ -6,11 +6,11 @@ import pytest
 from pytest import MonkeyPatch
 from pytest_mock import MockerFixture
 from database import get_connection
-from iorgsites.service import FactoryOnSiteService
+from iorgsites.service import iOrgSiteService
 import pytest_asyncio
 import pandas as pd 
 
-service = FactoryOnSiteService()
+service = iOrgSiteService()
 @pytest_asyncio.fixture
 async def setup_db():
     db_connection = get_connection()
