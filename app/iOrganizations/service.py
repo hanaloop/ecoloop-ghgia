@@ -66,7 +66,7 @@ class iOrganizationService:
             None
         """
         await self.prisma.iorganization.upsert(
-            data={"create": data, "update": data}, where=where
+            data={"create": data, "update": data}, where=where, include=include
         )
 
     @CatchError
@@ -257,7 +257,7 @@ class iOrganizationService:
         for row in tqdm(source.to_dict(orient="records"), total=len(source)):
             await self.upsert(
                 data=row, where={"erefId": row["erefId"]}
-            )  ##TODO: What is the best way to terminate the execution here when there is a problem with the data instead of crashing the server?
+            ) 
 
     # async def fetch_corp_details(self):
     #     """

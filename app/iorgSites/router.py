@@ -44,3 +44,11 @@ async def create(data):
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_iorgsites(data_source=data_source, buffer=file.file)
+
+@router.put("/update-addresses")
+async def update_addresses():
+    return await service.populate_addresses()
+
+@router.put("/update-single-address")
+async def update_single_address(uid: str):
+    return await service.populate_single_address(uid=uid)

@@ -1,6 +1,9 @@
+import json
+from socket import timeout
 from typing_extensions import Buffer
 import hashlib
 import numpy as np
+from pydantic import Json
 from tqdm import tqdm
 from app.utils.file import FileUtils
 import prisma
@@ -9,8 +12,11 @@ from app.database import get_connection
 from app.config.column_mapping import iorgsite_map
 import pandas as pd
 from app.foundation.exception import CatchError
+from app.requests.service import RequestService
+from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
+from prisma.fields import Json
 
-##Using service directly causes circular import error
+requests = RequestService()
 
 
 class iOrgSiteService:
@@ -54,7 +60,9 @@ class iOrgSiteService:
         where: prisma.types.IOrgSiteWhereUniqueInput,
         include=None,
     ):
-        await self.prisma.iorgsite.upsert(data={"create": data, "update": data}, where=where)
+        await self.prisma.iorgsite.upsert(
+            data={"create": data, "update": data}, where=where
+        )
         """
         Upserts an organization site in the database.
 
@@ -113,7 +121,12 @@ class iOrgSiteService:
 
     @CatchError
     async def fetch_some(
-        self, where: prisma.types.IOrgSiteWhereInput
+        self,
+        where: prisma.types.IOrgSiteWhereInput,
+        include: prisma.types.IOrgSiteInclude | None = None,
+        order: prisma.types.IOrgSiteOrderByInput
+        | list[prisma.types.IOrgSiteOrderByInput]
+        | None = None,
     ) -> list[prisma.models.IOrgSite]:
         """
         Fetches some data based on the given where clause.
@@ -124,13 +137,15 @@ class iOrgSiteService:
         Returns:
             A list of IOrgSite objects that match the given conditions.
         """
-        return await self.prisma.iorgsite.find_first(where=where)
+        return await self.prisma.iorgsite.find_many(
+            where=where, include=include, order=order
+        )
 
     @CatchError
     async def fetch_all(self) -> list[prisma.models.IOrgSite]:
         """
         Fetches all data from the OrgSite table.
-        
+
         Returns:
             A list of IOrgSite objects representing all records in the OrgSite table.
         """
@@ -245,7 +260,7 @@ class iOrgSiteService:
             + str(row["companyName"])
             + str(row["landAddress"])
         )
-        # print (hashlib.sha256(combined.encode()).hexdigest())
+        # print (hashlib.sha256(combined.encode()).hexdigest())e
         return hashlib.sha256(combined.encode()).hexdigest()
 
     @CatchError
@@ -296,3 +311,97 @@ class iOrgSiteService:
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
         for index, row in tqdm(source.iterrows(), total=len(source)):
             await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+
+    @CatchError
+    async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
+        """
+        Retrieves the structured address for a given site.
+
+        Args:
+            site (prisma.models.IOrgSite): The site for which to retrieve the structured address.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: A tuple containing the structured address and the address details.
+
+        Raises:
+            Exception: If there is an error retrieving the structured address.
+        """
+        request_addr = site.streetAddress or site.landAddress
+        response = await requests.request(
+            KAKAO_API_BURL,
+            headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+            params={
+                "query": request_addr,
+            },
+        )
+        api_loc_response = json.loads(response.text)
+        try:
+            region1 = api_loc_response.get("documents")[0].get("address")[
+                "region_1depth_name"
+            ]
+        except:
+            region1 = None
+        try:
+            region2 = api_loc_response.get("documents")[0].get("address")[
+                "region_2depth_name"
+            ]
+        except:
+            region2 = None
+
+        try:
+            address_detail = api_loc_response.get("documents")[0]
+        except:
+            address_detail = None
+
+        if region1 is None or region2 is None:
+            return None, None
+        else:
+            structured_address = f"{region1}|{region2}"
+
+        return structured_address, address_detail
+
+    @CatchError
+    async def populate_addresses(self) -> None:
+        """
+        Asynchronously populates addresses.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs during the population of addresses.
+        """
+        sites = await self.fetch_some(where={"structuredAddress": None})
+        for site in tqdm(sites, total=len(sites)):
+            structured_address, address_detail = await self.get_site_structured_address(
+                site
+            )
+            await self.prisma.iorgsite.update(
+                where={"uid": site.uid},
+                data={
+                    "structuredAddress": structured_address,
+                    "addressDetails": Json(address_detail),
+                },
+            )
+
+    @CatchError
+    async def populate_single_address(self, site: prisma.models.IOrgSite) -> None:
+        """
+        Populates a single address for a given site.
+
+        Parameters:
+            - site (prisma.models.IOrgSite): The site for which to populate the address.
+
+        Returns:
+            None
+        """
+        structured_address, address_detail = await self.get_site_structured_address(
+            site
+        )
+        await self.prisma.iorgsite.update(
+            where={"uid": site.uid},
+            data={
+                "structuredAddress": structured_address,
+                "addressDetail": Json(address_detail),
+            },
+        )

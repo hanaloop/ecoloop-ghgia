@@ -1,7 +1,6 @@
 from typing_extensions import Buffer
 import pandas as pd
 from app.foundation.exception import CatchError
-import magic 
 
 class FileUtils:
     async def read_to_pd(self, file_type: str, file: Buffer = None, path: str = None) -> pd.DataFrame:
