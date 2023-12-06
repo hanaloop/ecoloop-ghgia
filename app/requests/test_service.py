@@ -1,8 +1,6 @@
-from unittest import mock
 from aiolimiter import AsyncLimiter
 import pytest
-import asyncio
-from httpx import AsyncClient, Headers, QueryParams
+from httpx import Headers, QueryParams
 from tqdm import tqdm
 from app.iorgsites.service import RequestService
 import time

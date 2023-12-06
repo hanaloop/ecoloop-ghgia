@@ -1,16 +1,10 @@
-import datetime
 import hashlib
-import json
-import os
-import pytest
-from pytest import MonkeyPatch
-from pytest_mock import MockerFixture
 from database import get_connection
-from iorgsites.service import iOrgSiteService
+from iorgsites.service import IOrgSiteService
 import pytest_asyncio
 import pandas as pd 
 
-service = iOrgSiteService()
+service = IOrgSiteService()
 @pytest_asyncio.fixture
 async def setup_db():
     db_connection = get_connection()
@@ -32,15 +26,14 @@ def test_hash_row():
         "landAddress": "123 Main St"
     })
     expected1 = hashlib.sha256("12345ABC Corp123 Main St".encode()).hexdigest()
-    assert(service.hash_row(row1), expected1)
-
+    assert service.hash_row(row1) == expected1
     row2 = pd.Series({
         "businessRegistrationNum": "67890",
         "companyName": "XYZ Corp",
         "landAddress": "456 Elm St"
     })
     expected2 = hashlib.sha256("67890XYZ Corp456 Elm St".encode()).hexdigest()
-    assert(service.hash_row(row2), expected2)
+    assert service.hash_row(row2) == expected2
 
     # Testing for empty values in the row
     row3 = pd.Series({
@@ -49,7 +42,7 @@ def test_hash_row():
         "landAddress": ""
     })
     expected3 = hashlib.sha256("".encode()).hexdigest()
-    assert(service.hash_row(row3), expected3)
+    assert service.hash_row(row3) == expected3
 
     # Testing for row with None values
     row4 = pd.Series({
@@ -58,4 +51,4 @@ def test_hash_row():
         "landAddress": None
     })
     expected4 = hashlib.sha256("NoneNoneNone".encode()).hexdigest()
-    assert(service.hash_row(row4), expected4)
+    assert service.hash_row(row4) == expected4

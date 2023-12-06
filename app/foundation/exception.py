@@ -3,7 +3,7 @@ import functools
 import sys
 import traceback
 
-def CatchError(func):
+def catch_errors_decorator(func):
     @functools.wraps(func)
     async def async_wrapper(*args, **kwargs):
         try:

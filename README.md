@@ -40,6 +40,7 @@ Using Docker
 * Run tests
 
   ```bash
+  cd app
   python3 -m pytest
   ```
 * Usage

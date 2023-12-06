@@ -1,11 +1,5 @@
-import asyncio
-from tabnanny import check
-from httpx import AsyncClient, Headers, QueryParams
+from httpx import Headers, QueryParams
 import httpx
-from prisma import Json
-from app.config.env_config import KAKAO_API_KEY
-from app.database import get_connection
-import pandas as pd
 from aiolimiter import AsyncLimiter
 
 MAX_CALLS_PER_SECOND = 1

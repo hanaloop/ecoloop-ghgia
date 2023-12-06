@@ -1,8 +1,8 @@
-from fastapi import APIRouter, UploadFile, HTTPException
-from app.iorgsites.service import iOrgSiteService
+from fastapi import APIRouter, UploadFile
+from app.iorgsites.service import IOrgSiteService
 
 
-service = iOrgSiteService()
+service = IOrgSiteService()
 router = APIRouter(
     prefix="/api/iorgsites",
     tags=["iorgsites"],
