@@ -1,0 +1,36 @@
+name: Run Pytest on Pull Requests
+
+on:
+  pull_request:
+    branches: 
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11.5'
+
+    - name: Install Poetry
+      run: |
+          curl -sSL https://install.python-poetry.org | python -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+    - name: Install dependencies using Poetry
+      run: |
+        poetry config virtualenvs.create false
+        poetry install
+
+    - name: Setup Prisma Client
+      run: |
+        python -m prisma generate --schema=packages/database/prisma/schema.prisma
+                
+    - name: Run Pytest
+      run: python -m pytest

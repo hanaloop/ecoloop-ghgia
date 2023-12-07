@@ -5,16 +5,16 @@ import pytest_asyncio
 import pandas as pd 
 
 service = iOrgSiteService()
-@pytest_asyncio.fixture
-async def setup_db():
-    db_connection = get_connection()
-    await db_connection.connect()
-    yield   # This is where the test function will execute
-    await db_connection.disconnect()
+# @pytest_asyncio.fixture
+# async def setup_db():
+#     db_connection = get_connection()
+#     await db_connection.connect()
+#     yield   # This is where the test function will execute
+#     await db_connection.disconnect()
 
-@pytest_asyncio.fixture
-async def cleanup_db(setup_db):
-    await service.delete_all()
+# @pytest_asyncio.fixture
+# async def cleanup_db(setup_db):
+#     await service.delete_all()
      
 
 
