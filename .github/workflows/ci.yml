@@ -31,6 +31,9 @@ jobs:
     - name: Setup Prisma Client
       run: |
         python -m prisma generate --schema=packages/database/prisma/schema.prisma
-                
+        
+    - name: Set PYTHONPATH
+      run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
     - name: Run Pytest
-      run: python -m pytest
+      run: poetry run pytest
