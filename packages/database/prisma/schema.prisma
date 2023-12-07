@@ -291,14 +291,14 @@ model ISiteCategoryRel {
 model IEmissionData {
   sid                 Int      @default(autoincrement())
   uid                 String   @db.VarChar(40) @id @default(uuid())
-  createdByUid        String   @db.VarChar(40)
+  createdByUid        String?   @db.VarChar(40)
   dateCreated         DateTime @default(now())  // When the event was created
   dateModified        DateTime? // When the event was last modified
   dateDeleted         DateTime?
   deleteFlag          Boolean  @default(false)
 
-  settings            Json? // Json structure setting
-  additionalProps     Json? // aka additionalAttributes
+  settings            Json?    @default("{}")// Json structure setting
+  additionalProps     Json?    @default("{}")// aka additionalAttributes
   /// Any notes or remarks (by user)
   notes               String?
 
@@ -337,7 +337,7 @@ model IEmissionData {
   emissionDirect      Float?
   emissionElec        Float?
   emissionSteam       Float?
-  emissionOthers      Json?
+  emissionOthers      Json?    @default("{}")
   emissionTotal       Float
 
   // TODO: add pollutantId in 

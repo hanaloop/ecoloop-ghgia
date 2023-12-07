@@ -3,9 +3,7 @@ import pandas as pd
 import prisma
 from app.utils.file_type import return_list
 from app.database import get_connection
-from app.iorganizations.models import DartApiRequest
 from app.foundation.exception import CatchError
-from app.foundation.api_fetch import fetch_from_url
 from tqdm import tqdm
 from app.utils.file import FileUtils
 from app.config.column_mapping import iorganization_map

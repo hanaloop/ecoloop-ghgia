@@ -1,6 +1,5 @@
-import pytest
 import pandas as pd
-from utils.file_type import return_list
+from app.utils.file_type import return_list
 
 
 def test_return_list():

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, UploadFile
-from app.iorgsites.service import iOrgSiteService
+from app.emission_data.service import IEmissionDataService
 
 
-service = iOrgSiteService()
+service = IEmissionDataService()
 router = APIRouter(
-    prefix="/api/iorgsites",
-    tags=["iorgsites"],
+    prefix="/api/iemissiondata",
+    tags=["iemissiondata"],
 )
 
 @router.get("/")
@@ -28,7 +28,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 async def get_by_id(uid):
     return await service.fetch_some(where={"uid": uid})
 
-@router.delete("/") ##TODO: Need auth
+@router.delete("/")
 async def delete(where = None):
     return await service.delete(where=where)
 
@@ -43,4 +43,4 @@ async def create(data):
 @router.post("/upload")
 async def upload(file: UploadFile):
     data_source = file.filename
-    return await service.upload_iorgsites(data_source=data_source, buffer=file.file)
+    return await service.upload_data(data_source=data_source, buffer=file.file)
