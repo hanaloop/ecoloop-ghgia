@@ -8,7 +8,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
+    env:
+      PROJECT_PATH: ./
     steps:
     - name: Check out repository code
       uses: actions/checkout@v2
@@ -44,4 +45,4 @@ jobs:
       run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
     - name: Run Pytest
-      run: poetry run pytest
+      run: poetry run python -m pytest
