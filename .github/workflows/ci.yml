@@ -22,16 +22,24 @@ jobs:
       run: |
           curl -sSL https://install.python-poetry.org | python -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
-      
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cache/pypoetry/virtualenvs
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
     - name: Install dependencies using Poetry
       run: |
-        poetry config virtualenvs.create false
-        poetry install
+        poetry install --no-interaction
 
     - name: Setup Prisma Client
       run: |
-        python -m prisma generate --schema=packages/database/prisma/schema.prisma
-        
+        poetry run prisma generate --schema=packages/database/prisma/schema.prisma
+
     - name: Set PYTHONPATH
       run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
