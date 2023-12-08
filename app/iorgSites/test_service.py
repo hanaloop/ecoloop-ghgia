@@ -12,9 +12,9 @@ async def setup_db():
     yield   # This is where the test function will execute
     await db_connection.disconnect()
 
-@pytest_asyncio.fixture
-async def cleanup_db(setup_db):
-    await service.delete_all()
+# @pytest_asyncio.fixture
+# async def cleanup_db(setup_db):
+#     await service.delete_all()
      
 
 

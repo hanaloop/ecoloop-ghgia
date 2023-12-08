@@ -1,4 +1,6 @@
+import os
 from typing_extensions import Buffer
+import openpyxl
 import pandas as pd
 
 class FileUtils:
@@ -40,3 +42,21 @@ class FileUtils:
         df = pd.read_csv(file).fillna("")
         df.replace("",None,inplace=True)
         return df
+    
+    def get_excel_sheet_names(self, file: Buffer | str, data_source: str) -> list:
+        # Check the file extension
+        _, file_extension = os.path.splitext(data_source)
+
+        if file_extension in ['.xlsx', '.xlsm', '.xltx', '.xltm']:
+            # Use openpyxl for .xlsx files
+            workbook = openpyxl.load_workbook(file, read_only=True, data_only=True)
+            sheet_names = workbook.sheetnames
+        elif file_extension in ['.xls', '.xlt', '.xla']:
+            # Use xlrd for .xls files
+            workbook = pd.ExcelFile(file)
+            sheet_names = workbook.sheet_names
+        else:
+            raise ValueError("Unsupported file format")
+
+        return sheet_names
+
