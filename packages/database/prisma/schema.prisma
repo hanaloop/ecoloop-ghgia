@@ -276,7 +276,7 @@ model ISiteCategoryRel {
   product                     String? @db.VarChar
   regionUid                   String? @db.VarChar
   region                      Region? @relation(fields: [regionUid], references: [uid], onDelete: SetNull)
-  addressDetail               Json?   @default("{}")
+  addressDetails              Json?   @default("{}")
   structuredAddress           String? @db.VarChar
 
   isMainSector                Boolean @default(false)

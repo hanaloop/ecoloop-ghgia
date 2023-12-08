@@ -1,6 +1,5 @@
 import pytest
 import pandas as pd
-from unittest.mock import MagicMock, mock_open
 from io import StringIO
 from app.utils.file import FileUtils  # Replace with the correct import for FileUtils
 
