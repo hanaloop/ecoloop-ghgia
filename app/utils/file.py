@@ -60,3 +60,6 @@ class FileUtils:
 
         return sheet_names
 
+
+    def get_file_extension(self, data_source: str) -> str:
+        return os.path.splitext(data_source)[1]

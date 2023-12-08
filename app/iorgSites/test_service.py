@@ -1,6 +1,6 @@
 import hashlib
-from database import get_connection
-from iorgsites.service import IOrgSiteService
+from app.database import get_connection
+from app.iorgsites.service import IOrgSiteService
 import pytest_asyncio
 import pandas as pd 
 

@@ -1,7 +1,7 @@
 import numpy as np
 import prisma
 from app.utils.file import FileUtils
-from app.regions.service import RegionService
+from app.region.service import RegionService
 from app.foundation.field_type_lister import sort_fields_by_inner_annotation, match_to_types
 
 service = RegionService()

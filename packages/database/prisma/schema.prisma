@@ -264,7 +264,7 @@ model ISiteCategoryRel {
   additionalProps             Json?   @default("{}") // aka additionalAttributes
   notes                       String?
 
-  organizationUid             String @db.VarChar
+  organizationUid             String? @db.VarChar
   siteUid                     String? @db.VarChar
   site                        IOrgSite? @relation(fields: [siteUid], references: [uid], onDelete: SetNull)
 

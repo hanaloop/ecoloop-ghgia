@@ -14,13 +14,14 @@ from app.foundation.exception import catch_errors_decorator
 from app.requests.service import RequestService
 from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
 from prisma import Json
-
-requests = RequestService()
-
+from app.config.column_mapping import code_dict
+from app.isitecategoryrels.service import ISiteCategoryRelService
 
 class IOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
+        self.requests = RequestService()
+        self.rel_service = ISiteCategoryRelService()
 
     @catch_errors_decorator
     async def delete_all(self):
@@ -50,7 +51,7 @@ class IOrgSiteService:
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-           return await self.prisma.iorgsite.create(data=data)
+            return await self.prisma.iorgsite.create(data=data)
 
     @catch_errors_decorator
     async def upsert(
@@ -58,7 +59,7 @@ class IOrgSiteService:
         data: prisma.types.IOrgSiteCreateInput,
         where: prisma.types.IOrgSiteWhereUniqueInput,
         include=None,
-    ):
+    )-> prisma.models.IOrgSite | None:
         """
         Upserts an organization site in the database.
 
@@ -73,7 +74,6 @@ class IOrgSiteService:
         return await self.prisma.iorgsite.upsert(
             data={"create": data, "update": data}, where=where
         )
-
 
     @catch_errors_decorator
     @return_list
@@ -93,7 +93,7 @@ class IOrgSiteService:
     @return_list
     async def update(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput
-    ) -> None:
+    ) -> prisma.models.IOrgSite:
         """
         Update the given organization site with the provided data.
 
@@ -311,7 +311,10 @@ class IOrgSiteService:
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
         upserted_data = []
         for index, row in tqdm(source.iterrows(), total=len(source)):
-            upserted_data.append(await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]}))
+            upserted_row = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+            upserted_data.append(upserted_row)
+            # await self.populate_single_address(site=upserted_row) # Could also do this here but it will take long time with the rate limit
+            # await self.update_relation_single(site=upserted_row)
         return upserted_data
 
     @catch_errors_decorator
@@ -329,7 +332,7 @@ class IOrgSiteService:
             Exception: If there is an error retrieving the structured address.
         """
         request_addr = site.streetAddress or site.landAddress
-        response = await requests.request(
+        response = await self.requests.request(
             KAKAO_API_BURL,
             headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
             params={
@@ -378,7 +381,9 @@ class IOrgSiteService:
             await self.populate_single_address(site)
 
     @catch_errors_decorator
-    async def populate_single_address(self, uid: str, site: prisma.models.IOrgSite = None) -> None:
+    async def populate_single_address(
+        self, uid: str= None, site: prisma.models.IOrgSite = None
+    ) -> None:
         """
         Populates a single address for a given site.
 
@@ -390,6 +395,8 @@ class IOrgSiteService:
         """
         if site is None:
             site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
+        elif uid is None:
+            uid = site.uid
         structured_address, address_detail = await self.get_site_structured_address(
             site
         )
@@ -400,3 +407,43 @@ class IOrgSiteService:
                 "addressDetails": Json(address_detail),
             },
         )
+
+    async def update_relation_single(self, uid: str = None, site: prisma.models.IOrgSite = None) -> None:
+        if not site and not uid:
+            raise Exception("Either site or uid must be provided")
+
+        if not uid:
+            uid = site.uid
+        elif not site:
+            site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
+
+        if site.sectorIds and site.sectorIdMain:
+            sectors = site.sectorIds.split(",")
+            sector_count = len(sectors)
+            contribution_magnitude = site.manufacturingFacilityArea / sector_count
+
+            site_rels = [
+                {
+                    "siteUid": uid,
+                    "sectorId": sector,
+                    "contributionMagnitudeSector": contribution_magnitude,
+                    "categoryName": code_dict.get(sector),
+                    "siteAddress": site.structuredAddress,
+                    "isMainSector": site.sectorIdMain == sector,
+                }
+                for sector in sectors
+            ]
+
+            await self.rel_service.delete_many(where={"siteUid": uid})
+            await self.rel_service.create_many(data=site_rels)
+                # await self.rel_service.calculate_emission_ratio(relation_obj)
+
+
+    async def update_relations(self) -> None:
+        sites = await self.fetch_all()
+        for site in tqdm(sites, total=len(sites)):
+            await self.update_relation_single(site = site)
+        del sites
+        await self.rel_service.calculate_emission_ratio()
+
+ 

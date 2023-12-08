@@ -116,7 +116,7 @@ class IEmissionDataService():
         Returns:
             A list of IEmissionData objects that match the given conditions.
         """
-        return await self.prisma.iemissiondata.find_first(where=where)
+        return await self.prisma.iemissiondata.find_many(where=where)
 
     async def fetch_all(self) -> list[prisma.models.IEmissionData]:
         """

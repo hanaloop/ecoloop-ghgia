@@ -2,7 +2,7 @@ from httpx import Headers, QueryParams
 import httpx
 from aiolimiter import AsyncLimiter
 
-MAX_CALLS_PER_SECOND = 1
+MAX_CALLS_PER_SECOND = 50
 MAX_CALLS_PER_MINUTE = MAX_CALLS_PER_SECOND * 60
 MAX_CALLS_PER_HOUR = MAX_CALLS_PER_MINUTE * 60
 MAX_CALLS_PER_DAY = MAX_CALLS_PER_HOUR * 24
