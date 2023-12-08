@@ -1,8 +1,8 @@
 from fastapi import APIRouter, UploadFile
-from app.iorganizations.service import iOrganizationService
+from app.iorganizations.service import IOrganizationService
 
 
-service = iOrganizationService()
+service = IOrganizationService()
 router = APIRouter(
     prefix="/api/iorganizations",
     tags=["iorganizations"],
@@ -25,7 +25,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
     return await service.group_by(count = count, by = by, sum = sum, order = order, having = having)
 
 @router.get("/{uid}")
-async def get_by_id(uid):
+async def get_by_id(uid: str):
     return await service.fetch_some(where={"uid": uid})
 
 @router.delete("/")

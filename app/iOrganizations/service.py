@@ -3,24 +3,24 @@ import pandas as pd
 import prisma
 from app.utils.file_type import return_list
 from app.database import get_connection
-from app.foundation.exception import CatchError
+from app.foundation.exception import catch_errors_decorator
 from tqdm import tqdm
 from app.utils.file import FileUtils
 from app.config.column_mapping import iorganization_map
 
 
-class iOrganizationService:
+class IOrganizationService:
     def __init__(self):
         self.prisma = get_connection()
 
-    @CatchError
+    @catch_errors_decorator
     async def delete_all(self):
         """
         Deletes all records in the 'IOrganization' table.
         """
-        await self.prisma.iorganization.delete_many()
+        return await self.prisma.iorganization.delete_many()
 
-    @CatchError
+    @catch_errors_decorator
     async def update_or_create(
         self,
         data: prisma.models.IOrganization,
@@ -39,19 +39,19 @@ class iOrganizationService:
         existing_record = await self.prisma.iorganization.find_first(where=where)
 
         if existing_record:
-            await self.prisma.iorganization.update(
+            return await self.prisma.iorganization.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.iorganization.create(data=data)
+            return await self.prisma.iorganization.create(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     async def upsert(
         self,
         data: prisma.types.IOrganizationCreateInput,
         where: prisma.types.IOrganizationWhereUniqueInput,
         include=None,
-    ):
+    ) -> prisma.models.IOrganization:
         """
         Upserts an organization in the database.
 
@@ -63,13 +63,13 @@ class iOrganizationService:
         Returns:
             None
         """
-        await self.prisma.iorganization.upsert(
-            data={"create": data, "update": data}, where=where
+        return await self.prisma.iorganization.upsert(
+            data={"create": data, "update": data}, where=where, include=include
         )
 
-    @CatchError
+    @catch_errors_decorator
     @return_list
-    async def create(self, data: prisma.types.IOrganizationCreateInput) -> None:
+    async def create(self, data: prisma.types.IOrganizationCreateInput) -> prisma.models.IOrganization:
         """
         Creates a new organization with the given data.
 
@@ -79,15 +79,15 @@ class iOrganizationService:
         Returns:
             None
         """
-        await self.prisma.iorganization.create(data=data)
+        return await self.prisma.iorganization.create(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     @return_list
     async def update(
         self,
         data: prisma.models.IOrganization,
         where: prisma.types.IOrganizationWhereUniqueInput,
-    ) -> None:
+    ) -> prisma.models.IOrganization:
         """
         Update the given organization with the provided data.
 
@@ -98,10 +98,10 @@ class iOrganizationService:
         Returns:
             None
         """
-        await self.prisma.iorganization.update(where=where, data=data)
+        return await self.prisma.iorganization.update(where=where, data=data)
 
-    @CatchError
-    async def delete(self, where: prisma.types.IOrganizationWhereInput) -> None:
+    @catch_errors_decorator
+    async def delete(self, where: prisma.types.IOrganizationWhereInput) -> prisma.models.IOrganization:
         """
         Deletes a record from the OrgSite table based on the given criteria.
 
@@ -111,9 +111,9 @@ class iOrganizationService:
         Returns:
             None
         """
-        await self.prisma.iorganization.delete(where=where)
+        return await self.prisma.iorganization.delete(where=where)
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_some(
         self, where: prisma.types.IOrganizationWhereInput
     ) -> list[prisma.models.IOrganization]:
@@ -128,7 +128,7 @@ class iOrganizationService:
         """
         return await self.prisma.iorganization.find_first(where=where)
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_all(self) -> list[prisma.models.IOrganization]:
         """
         Fetches all data from the OrgSite table.
@@ -138,9 +138,9 @@ class iOrganizationService:
         """
         return await self.prisma.iorganization.find_many()
 
-    @CatchError
+    @catch_errors_decorator
     @return_list
-    async def create_many(self, data: prisma.types.IOrganizationCreateInput) -> None:
+    async def create_many(self, data: prisma.types.IOrganizationCreateInput) -> list[prisma.models.IOrganization]:
         """
         Create multiple organizations.
 
@@ -150,14 +150,14 @@ class iOrganizationService:
         Returns:
             None: This function does not return anything.
         """
-        await self.prisma.iorganization.create_many(data=data)
+        return await self.prisma.iorganization.create_many(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     async def group_by(
         self, count=None, by=None, sum=None, order=None, having=None
     ) -> list[prisma.models.IOrganization]:
         """
-        A decorator that catches any errors that occur during the execution of the `group_by` function.
+        Groups data based on the given criteria (sum, count, etc).
 
         Args:
             count (Optional): The count parameter of the `group_by` function.
@@ -173,7 +173,7 @@ class iOrganizationService:
             count=count, by=by, sum=sum, order=order, having=having
         )
 
-    @CatchError
+    @catch_errors_decorator
     async def _fetch_page(
         self, cursor: str, page_size=10
     ) -> tuple[list[prisma.models.IOrganization], str]:
@@ -196,7 +196,7 @@ class iOrganizationService:
         next_cursor = results[-1].id if results else None
         return results, next_cursor
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_paged(
         self, take=10, skip=0, order=None
     ) -> list[prisma.models.IOrganization]:
@@ -216,11 +216,11 @@ class iOrganizationService:
         )
         return results
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_all_paginated(self):
         pass
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_count(self) -> int:
         """
         Fetches the count of the IOrganization table.
@@ -232,7 +232,7 @@ class iOrganizationService:
 
     # Business logic
 
-    @CatchError
+    @catch_errors_decorator
     async def upload_organizations(
         self, data_source: str, buffer: Buffer = None, path: str = None
     ) -> list[prisma.models.IOrganization]:
@@ -252,10 +252,12 @@ class iOrganizationService:
         source.rename(columns=iorganization_map, inplace=True)
         source["erefId"] = "dartId:" + source["erefId"].astype(str)
         source["dateModified"] = pd.to_datetime(source["dateModified"])
+        upserted_data = []
         for row in tqdm(source.to_dict(orient="records"), total=len(source)):
-            await self.upsert(
+            upserted_data.append(await self.upsert(
                 data=row, where={"erefId": row["erefId"]}
-            )  ##TODO: What is the best way to terminate the execution here when there is a problem with the data instead of crashing the server?
+            ))
+        return upserted_data
 
     # async def fetch_corp_details(self):
     #     """

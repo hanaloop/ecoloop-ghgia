@@ -3,38 +3,30 @@ import functools
 import sys
 import traceback
 
-class CatchError:
-    def __init__(self, func):
-        self.wrapped_func = func
-        functools.update_wrapper(self, func)
-
-    def __call__(self, *args, **kwargs):
-        if asyncio.iscoroutinefunction(self.wrapped_func):
-            return self.async_wrapper(*args, **kwargs)
-        else:
-            return self.sync_wrapper(*args, **kwargs)
-
-    async def async_wrapper(self, *args, **kwargs):
+def catch_errors_decorator(func):
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs):
         try:
-            return await self.wrapped_func(*args, **kwargs)
+            return await func(*args, **kwargs)
         except Exception as e:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            tb_details = traceback.extract_tb(exc_traceback)[-1]
-            filename = tb_details.filename
-            line_number = tb_details.lineno
-            print(f"An error occurred in function {self.wrapped_func.__name__}: {e} at line {line_number} in file {filename}")
+            report_error(func, e)
 
-    def sync_wrapper(self, *args, **kwargs):
+    @functools.wraps(func)
+    def sync_wrapper(*args, **kwargs):
         try:
-            return self.wrapped_func(*args, **kwargs)
+            return func(*args, **kwargs)
         except Exception as e:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            tb_details = traceback.extract_tb(exc_traceback)[-1]
-            filename = tb_details.filename
-            line_number = tb_details.lineno
-            print(f"An error occurred in function {self.wrapped_func.__name__}: {e} at line {line_number} in file {filename}")
+            report_error(func, e)
 
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return functools.partial(self.__call__, instance)
+    def report_error(f, e):
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        tb_details = traceback.extract_tb(exc_traceback)[-1]
+        filename = tb_details.filename
+        line_number = tb_details.lineno
+        print(f"An error occurred in function {f.__name__}: {e} at line {line_number} in file {filename}")
+        raise
+
+    if asyncio.iscoroutinefunction(func):
+        return async_wrapper
+    else:
+        return sync_wrapper

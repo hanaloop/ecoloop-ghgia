@@ -1,6 +1,8 @@
+import json
 from typing_extensions import Buffer
 import hashlib
 import numpy as np
+from pydantic import Json
 from tqdm import tqdm
 from app.utils.file import FileUtils
 import prisma
@@ -8,23 +10,26 @@ from app.utils.file_type import return_list
 from app.database import get_connection
 from app.config.column_mapping import iorgsite_map
 import pandas as pd
-from app.foundation.exception import CatchError
+from app.foundation.exception import catch_errors_decorator
+from app.requests.service import RequestService
+from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
+from prisma import Json
 
-##Using service directly causes circular import error
+requests = RequestService()
 
 
-class iOrgSiteService:
+class IOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
 
-    @CatchError
+    @catch_errors_decorator
     async def delete_all(self):
         """
         Deletes all records in the 'iorgsite' table.
         """
-        await self.prisma.iorgsite.delete_many()
+        return await self.prisma.iorgsite.delete_many()
 
-    @CatchError
+    @catch_errors_decorator
     async def update_or_create(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereInput
     ):
@@ -41,20 +46,19 @@ class iOrgSiteService:
         existing_record = await self.prisma.iorgsite.find_first(where=where)
 
         if existing_record:
-            await self.prisma.iorgsite.update(
+            return await self.prisma.iorgsite.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.iorgsite.create(data=data)
+           return await self.prisma.iorgsite.create(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     async def upsert(
         self,
         data: prisma.types.IOrgSiteCreateInput,
         where: prisma.types.IOrgSiteWhereUniqueInput,
         include=None,
     ):
-        await self.prisma.iorgsite.upsert(data={"create": data, "update": data}, where=where)
         """
         Upserts an organization site in the database.
 
@@ -66,8 +70,12 @@ class iOrgSiteService:
         Returns:
             None
         """
+        return await self.prisma.iorgsite.upsert(
+            data={"create": data, "update": data}, where=where
+        )
 
-    @CatchError
+
+    @catch_errors_decorator
     @return_list
     async def create(self, data: prisma.types.IOrgSiteCreateInput) -> None:
         """
@@ -79,9 +87,9 @@ class iOrgSiteService:
         Returns:
             None
         """
-        await self.prisma.iorgsite.create(data=data)
+        return await self.prisma.iorgsite.create(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     @return_list
     async def update(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput
@@ -96,9 +104,9 @@ class iOrgSiteService:
         Returns:
             None
         """
-        await self.prisma.iorgsite.update(where=where, data=data)
+        return await self.prisma.iorgsite.update(where=where, data=data)
 
-    @CatchError
+    @catch_errors_decorator
     async def delete(self, where: prisma.types.IOrgSiteWhereInput) -> None:
         """
         Deletes a record from the OrgSite table based on the given criteria.
@@ -109,11 +117,16 @@ class iOrgSiteService:
         Returns:
             None
         """
-        await self.prisma.iorgsite.delete(where=where)
+        return await self.prisma.iorgsite.delete(where=where)
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_some(
-        self, where: prisma.types.IOrgSiteWhereInput
+        self,
+        where: prisma.types.IOrgSiteWhereInput,
+        include: prisma.types.IOrgSiteInclude | None = None,
+        order: prisma.types.IOrgSiteOrderByInput
+        | list[prisma.types.IOrgSiteOrderByInput]
+        | None = None,
     ) -> list[prisma.models.IOrgSite]:
         """
         Fetches some data based on the given where clause.
@@ -124,19 +137,21 @@ class iOrgSiteService:
         Returns:
             A list of IOrgSite objects that match the given conditions.
         """
-        return await self.prisma.iorgsite.find_first(where=where)
+        return await self.prisma.iorgsite.find_many(
+            where=where, include=include, order=order
+        )
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_all(self) -> list[prisma.models.IOrgSite]:
         """
         Fetches all data from the OrgSite table.
-        
+
         Returns:
             A list of IOrgSite objects representing all records in the OrgSite table.
         """
         return await self.prisma.iorgsite.find_many()
 
-    @CatchError
+    @catch_errors_decorator
     @return_list
     async def create_many(self, data: prisma.types.IOrgSiteCreateInput) -> None:
         """
@@ -148,9 +163,9 @@ class iOrgSiteService:
         Returns:
             None: This function does not return anything.
         """
-        await self.prisma.iorgsite.create_many(data=data)
+        return await self.prisma.iorgsite.create_many(data=data)
 
-    @CatchError
+    @catch_errors_decorator
     async def group_by(
         self, count=None, by=None, sum=None, order=None, having=None
     ) -> list[prisma.models.IOrgSite]:
@@ -171,7 +186,7 @@ class iOrgSiteService:
             count=count, by=by, sum=sum, order=order, having=having
         )
 
-    @CatchError
+    @catch_errors_decorator
     async def _fetch_page(
         self, cursor: str, page_size=10
     ) -> tuple[list[prisma.models.IOrgSite], str]:
@@ -194,7 +209,7 @@ class iOrgSiteService:
         next_cursor = results[-1].id if results else None
         return results, next_cursor
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_paged(
         self, take=10, skip=0, order=None
     ) -> list[prisma.models.IOrgSite]:
@@ -214,11 +229,11 @@ class iOrgSiteService:
         )
         return results
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_all_paginated(self):
         pass
 
-    @CatchError
+    @catch_errors_decorator
     async def fetch_count(self) -> int:
         """
         Fetches the count of the iorgsite table.
@@ -229,7 +244,7 @@ class iOrgSiteService:
         return await self.prisma.iorgsite.count()
 
     # Business logic
-    @CatchError
+    @catch_errors_decorator
     def hash_row(self, row: pd.Series) -> str:
         """
         Hashes the row to create a unique key
@@ -245,10 +260,10 @@ class iOrgSiteService:
             + str(row["companyName"])
             + str(row["landAddress"])
         )
-        # print (hashlib.sha256(combined.encode()).hexdigest())
+        # print (hashlib.sha256(combined.encode()).hexdigest())e
         return hashlib.sha256(combined.encode()).hexdigest()
 
-    @CatchError
+    @catch_errors_decorator
     def transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Transforms the given DataFrame by renaming columns based on the `iorgsite_map` dictionary. Then, it replaces "-" with `None` in specific columns and converts them to datetime objects. Finally, it converts the "sectorIdMain" and "factoryManagementNumber" columns to strings.
@@ -274,7 +289,7 @@ class iOrgSiteService:
         newDf["factoryManagementNumber"] = newDf["factoryManagementNumber"].astype(str)
         return newDf
 
-    @CatchError
+    @catch_errors_decorator
     async def upload_iorgsites(
         self, data_source: str, buffer: Buffer = None, path: str = None
     ) -> None:
@@ -294,5 +309,94 @@ class iOrgSiteService:
         source["dataSource"] = data_source
         source = self.transform_data(source)
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
+        upserted_data = []
         for index, row in tqdm(source.iterrows(), total=len(source)):
-            await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+            upserted_data.append(await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]}))
+        return upserted_data
+
+    @catch_errors_decorator
+    async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
+        """
+        Retrieves the structured address for a given site.
+
+        Args:
+            site (prisma.models.IOrgSite): The site for which to retrieve the structured address.
+
+        Returns:
+            Tuple[str, Dict[str, Any]]: A tuple containing the structured address and the address details.
+
+        Raises:
+            Exception: If there is an error retrieving the structured address.
+        """
+        request_addr = site.streetAddress or site.landAddress
+        response = await requests.request(
+            KAKAO_API_BURL,
+            headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+            params={
+                "query": request_addr,
+            },
+        )
+        api_loc_response = json.loads(response.text)
+        try:
+            region1 = api_loc_response.get("documents")[0].get("address")[
+                "region_1depth_name"
+            ]
+        except:
+            region1 = None
+        try:
+            region2 = api_loc_response.get("documents")[0].get("address")[
+                "region_2depth_name"
+            ]
+        except:
+            region2 = None
+
+        try:
+            address_detail = api_loc_response.get("documents")[0]
+        except:
+            address_detail = None
+
+        if region1 is None or region2 is None:
+            return None, None
+        else:
+            structured_address = f"{region1}|{region2}"
+
+        return structured_address, address_detail
+
+    @catch_errors_decorator
+    async def populate_addresses(self) -> None:
+        """
+        Asynchronously populates addresses.
+
+        Returns:
+            None
+
+        Raises:
+            Exception: If an error occurs during the population of addresses.
+        """
+        sites = await self.fetch_some(where={"structuredAddress": None})
+        for site in tqdm(sites, total=len(sites)):
+            await self.populate_single_address(site)
+
+    @catch_errors_decorator
+    async def populate_single_address(self, uid: str, site: prisma.models.IOrgSite = None) -> None:
+        """
+        Populates a single address for a given site.
+
+        Parameters:
+            - site (prisma.models.IOrgSite): The site for which to populate the address.
+
+        Returns:
+            None
+        """
+        if site is None:
+            site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
+        structured_address, address_detail = await self.get_site_structured_address(
+            site
+        )
+        return await self.prisma.iorgsite.update(
+            where={"uid": site.uid},
+            data={
+                "structuredAddress": structured_address,
+                "addressDetails": Json(address_detail),
+            },
+        )

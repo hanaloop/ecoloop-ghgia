@@ -1,8 +1,8 @@
 from fastapi import APIRouter, UploadFile
-from app.iorgsites.service import iOrgSiteService
+from app.iorgsites.service import IOrgSiteService
 
 
-service = iOrgSiteService()
+service = IOrgSiteService()
 router = APIRouter(
     prefix="/api/iorgsites",
     tags=["iorgsites"],
@@ -44,3 +44,11 @@ async def create(data):
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_iorgsites(data_source=data_source, buffer=file.file)
+
+@router.put("/addresses/update")
+async def update_addresses():
+    return await service.populate_addresses()
+
+@router.put("/{uid}/address")
+async def update_single_address(uid: str):
+    return await service.populate_single_address(uid=uid)
