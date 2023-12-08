@@ -13,7 +13,7 @@ import pandas as pd
 from app.foundation.exception import catch_errors_decorator
 from app.requests.service import RequestService
 from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
-from prisma.fields import Json
+from prisma import Json
 
 requests = RequestService()
 
@@ -375,19 +375,10 @@ class IOrgSiteService:
         """
         sites = await self.fetch_some(where={"structuredAddress": None})
         for site in tqdm(sites, total=len(sites)):
-            structured_address, address_detail = await self.get_site_structured_address(
-                site
-            )
-            return await self.prisma.iorgsite.update(
-                where={"uid": site.uid},
-                data={
-                    "structuredAddress": structured_address,
-                    "addressDetails": Json(address_detail),
-                },
-            )
+            await self.populate_single_address(site)
 
     @catch_errors_decorator
-    async def populate_single_address(self, site: prisma.models.IOrgSite) -> None:
+    async def populate_single_address(self, uid: str, site: prisma.models.IOrgSite = None) -> None:
         """
         Populates a single address for a given site.
 
@@ -397,6 +388,8 @@ class IOrgSiteService:
         Returns:
             None
         """
+        if site is None:
+            site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
         structured_address, address_detail = await self.get_site_structured_address(
             site
         )
@@ -404,6 +397,6 @@ class IOrgSiteService:
             where={"uid": site.uid},
             data={
                 "structuredAddress": structured_address,
-                "addressDetail": Json(address_detail),
+                "addressDetails": Json(address_detail),
             },
         )

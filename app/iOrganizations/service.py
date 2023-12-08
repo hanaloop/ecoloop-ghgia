@@ -51,7 +51,7 @@ class IOrganizationService:
         data: prisma.types.IOrganizationCreateInput,
         where: prisma.types.IOrganizationWhereUniqueInput,
         include=None,
-    ):
+    ) -> prisma.models.IOrganization:
         """
         Upserts an organization in the database.
 
@@ -69,7 +69,7 @@ class IOrganizationService:
 
     @catch_errors_decorator
     @return_list
-    async def create(self, data: prisma.types.IOrganizationCreateInput) -> None:
+    async def create(self, data: prisma.types.IOrganizationCreateInput) -> prisma.models.IOrganization:
         """
         Creates a new organization with the given data.
 
@@ -87,7 +87,7 @@ class IOrganizationService:
         self,
         data: prisma.models.IOrganization,
         where: prisma.types.IOrganizationWhereUniqueInput,
-    ) -> None:
+    ) -> prisma.models.IOrganization:
         """
         Update the given organization with the provided data.
 
@@ -101,7 +101,7 @@ class IOrganizationService:
         return await self.prisma.iorganization.update(where=where, data=data)
 
     @catch_errors_decorator
-    async def delete(self, where: prisma.types.IOrganizationWhereInput) -> None:
+    async def delete(self, where: prisma.types.IOrganizationWhereInput) -> prisma.models.IOrganization:
         """
         Deletes a record from the OrgSite table based on the given criteria.
 
@@ -140,7 +140,7 @@ class IOrganizationService:
 
     @catch_errors_decorator
     @return_list
-    async def create_many(self, data: prisma.types.IOrganizationCreateInput) -> None:
+    async def create_many(self, data: prisma.types.IOrganizationCreateInput) -> list[prisma.models.IOrganization]:
         """
         Create multiple organizations.
 
@@ -157,7 +157,7 @@ class IOrganizationService:
         self, count=None, by=None, sum=None, order=None, having=None
     ) -> list[prisma.models.IOrganization]:
         """
-        A decorator that catches any errors that occur during the execution of the `group_by` function.
+        Groups data based on the given criteria (sum, count, etc).
 
         Args:
             count (Optional): The count parameter of the `group_by` function.
