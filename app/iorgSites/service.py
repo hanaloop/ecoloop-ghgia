@@ -1,4 +1,7 @@
 import json
+import logging
+import time
+from typing import AsyncIterator
 from typing_extensions import Buffer
 import hashlib
 import numpy as np
@@ -187,7 +190,7 @@ class IOrgSiteService:
         )
 
     @catch_errors_decorator
-    async def _fetch_page(
+    async def _fetch_page( ##TODO: Make sure this works
         self, cursor: str, page_size=10
     ) -> tuple[list[prisma.models.IOrgSite], str]:
         """
@@ -203,10 +206,10 @@ class IOrgSiteService:
         """
         results = await self.prisma.iorgsite.find_many(
             take=page_size,
-            cursor={"id": cursor} if cursor else None,
-            order={"id": "asc"},
+            cursor={"uid": cursor} if cursor else None,
+            order={"sid": "asc"},
         )
-        next_cursor = results[-1].id if results else None
+        next_cursor = results[-1].uid if results else None
         return results, next_cursor
 
     @catch_errors_decorator
@@ -230,8 +233,13 @@ class IOrgSiteService:
         return results
 
     @catch_errors_decorator
-    async def fetch_all_paginated(self):
-        pass
+    async def fetch_all_paginated(self, page_size=10) -> AsyncIterator[list[prisma.models.IOrgSite]]:
+        cursor = None
+        while True:
+            results, cursor = await self._fetch_page(cursor = cursor, page_size=page_size)
+            if not results:
+                break
+            yield results
 
     @catch_errors_decorator
     async def fetch_count(self) -> int:
@@ -418,12 +426,18 @@ class IOrgSiteService:
             site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
 
         if site.sectorIds and site.sectorIdMain:
+            proxy_field = site.buildingArea #This is just for comparison purposes, change to manufacturingFacilityArea
+            if proxy_field <= 0:
+                logging.warn(f"Skipping {uid} as proxy field is <= 0")
+                return
             sectors = site.sectorIds.split(",")
-            sector_count = len(sectors)
-            contribution_magnitude = site.manufacturingFacilityArea / sector_count
+            sector_count = len(sectors) + 1
+            contribution_magnitude = proxy_field / sector_count
 
-            site_rels = [
-                {
+            rel_obj = []
+            await self.rel_service.delete_many(where={"siteUid": uid}) #TODO: This is slower but we need to have this in order to account for chancing sectorids
+            for sector in sectors:
+                relation_obj = {
                     "siteUid": uid,
                     "sectorId": sector,
                     "contributionMagnitudeSector": contribution_magnitude,
@@ -431,19 +445,35 @@ class IOrgSiteService:
                     "siteAddress": site.structuredAddress,
                     "isMainSector": site.sectorIdMain == sector,
                 }
-                for sector in sectors
-            ]
-
-            await self.rel_service.delete_many(where={"siteUid": uid})
-            await self.rel_service.create_many(data=site_rels)
-                # await self.rel_service.calculate_emission_ratio(relation_obj)
+                created_rel = await self.rel_service.update_or_create(
+                    data=relation_obj,
+                    where={"siteUid": uid, "sectorId": relation_obj["sectorId"]},
+                )
+                if created_rel:
+                    rel_obj.append(created_rel)
+            return rel_obj
 
 
     async def update_relations(self) -> None:
-        sites = await self.fetch_all()
-        for site in tqdm(sites, total=len(sites)):
-            await self.update_relation_single(site = site)
-        del sites
-        await self.rel_service.calculate_emission_ratio()
+        site_count = await self.prisma.iorgsite.count()
+        pbar = tqdm(total=site_count)
+        
+        async for sites in self.fetch_all_paginated(page_size=100):
+            for site in sites:
+                rels = await self.update_relation_single(site=site)
+                if rels:
+                    await self.rel_service.calculate_emission_ratios(rels)
+                pbar.update(1)
+        
+        pbar.close()
 
- 
+    async def update_site_dependency(self, uid: str) -> None:
+        site =  await self.fetch_some(where={"uid": uid})
+        if site:
+            rel = await self.update_relation_single(site=site[0])
+            if rel:
+                await self.rel_service.calculate_emission_ratios(rel)
+
+
+
+    

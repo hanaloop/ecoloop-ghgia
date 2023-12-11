@@ -92,7 +92,7 @@ emission_data_cols = [
 ]
 
 ipcc_to_gir_code = {
-    '2.A': 'A.  광물산업', 
+    '2.A' : 'A.  광물산업', 
     '2.B' : 'B.  화학산업', 
     '2.C' : 'C.  금속산업',
 }

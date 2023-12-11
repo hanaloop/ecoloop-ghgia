@@ -2,7 +2,7 @@ import prisma
 from tqdm import tqdm
 from app.utils.file import FileUtils
 from app.emission_data.service import IEmissionDataService
-from app.foundation.field_type_lister import match_to_types, sort_fields_by_inner_annotation
+from app.foundation.field_type_match import match_to_types, sort_fields_by_inner_annotation
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
 
 service = IEmissionDataService()

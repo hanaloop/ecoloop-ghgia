@@ -1,10 +1,14 @@
+from calendar import c
 import datetime
-
+import time
+from app.config.column_mapping import code_dict
 from tqdm import tqdm
 from app.database import get_connection
 import prisma 
 from app.foundation.exception import catch_errors_decorator
 from app.emission_data.service import IEmissionDataService
+from app.config.column_mapping import ipcc_to_gir_code
+from app.utils.string import get_first_level_category
 
 class ISiteCategoryRelService():
     def __init__(self):
@@ -50,11 +54,11 @@ class ISiteCategoryRelService():
         existing_record = await self.prisma.isitecategoryrel.find_first(where=where)
 
         if existing_record:
-            await self.prisma.isitecategoryrel.update(
+            return await self.prisma.isitecategoryrel.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.isitecategoryrel.create(data=data)
+            return await self.prisma.isitecategoryrel.create(data=data)
 
     async def upsert(
         self,
@@ -116,7 +120,8 @@ class ISiteCategoryRelService():
         await self.prisma.isitecategoryrel.delete(where=where)
 
     async def fetch_some(
-        self, where: prisma.types.IOrgSiteWhereInput
+        self, where: prisma.types.IOrgSiteWhereInput,
+        include: prisma.types.IOrgSiteInclude | None = None
     ) -> list[prisma.models.ISiteCategoryRel]:
         """
         Fetches some data based on the given where clause.
@@ -127,7 +132,7 @@ class ISiteCategoryRelService():
         Returns:
             A list of ISiteCategoryRel objects that match the given conditions.
         """
-        return await self.prisma.isitecategoryrel.find_first(where=where)
+        return await self.prisma.isitecategoryrel.find_many(where=where, include=include)
 
     async def fetch_all(self) -> list[prisma.models.ISiteCategoryRel]:
         """
@@ -146,7 +151,7 @@ class ISiteCategoryRelService():
             data (prisma.types.IOrgSiteCreateInput): The data to create multiple org sites.
 
         Returns:
-            The nu.
+            The number of org sites created.
         """
         await self.prisma.isitecategoryrel.create_many(data=data)
 
@@ -224,59 +229,64 @@ class ISiteCategoryRelService():
         return await self.prisma.isitecategoryrel.count()
 
 
-    # async def calculate_contribution_sectors(self):
-    #     """
-    #     Calculate the contribution of each sector in each factory, by dividing the building area by the number of sector codes.
-    #     At the end inserts into the relation table, including number of sector codes, and the contributionMagnitudeSector.
-    #     """
-    #     fa = IOrgSiteService()
-    #     factory_relations = await self.fetch_all()
-    #     for relation in tqdm(factory_relations, total=len(factory_relations)):
-    #         factory = await fa.fetch_one(where={"uid":relation.factoryUid})
-    #         relation.numSectorCodes = factory.industryNumber.count(",") + 1
-    #         # TODO: Change buildingArea to manufacturingFacilityArea
-    #         relation.contributionMagnitudeSector = factory.buildingArea / relation.numSectorCodes
-    #         relation.weightedContributionMagnitudSector = relation.contributionMagnitudeSector * mainSectorWeight
-    #         await self.update(data={"numSectorCodes":relation.numSectorCodes, "contributionMagnitudeSector":relation.contributionMagnitudeSector},
-    #             where={"uid":relation.uid})
-
-    async def calculate_emission_ratio(self):
-        """_summary_
-        Calculates the emission ratio for each factory by calculating the sum of the contributionMagnitudeSector in each code, 
-        and dividing the contributionMagnitudeSector of each factory by this sum, then multiplying the result by the emissionTotal
-        fetched from the EmissionDataService.
-        """
-        em = IEmissionDataService()
+    async def calculate_emission_ratios(self, relations: list[prisma.models.ISiteCategoryRel]) -> None:
         totalContributionMagnitudeInSector = await self.group_by(by=["categoryName"], sum={"contributionMagnitudeSector":True})
-        relations = await self.fetch_all()
-        for relation in tqdm(relations, total=len(relations)):
-            total_emissions = await em.fetch_some(where={"categoryName":relation.categoryName, "periodStartDt":datetime.datetime(2020, 1, 1), "periodEndDt":datetime.datetime(2020, 12, 31)}) #TODO: ATM only for 2020, how do we want to handle the dates?
+        for relation in relations:
+            if relation.categoryName is None:
+                continue
+            category_name_gir4 = get_first_level_category(relation.categoryName)
+            category_name_gir1 = ipcc_to_gir_code.get(get_first_level_category(relation.categoryName))
+            total_emissions = await self.emission_data_service.fetch_some(
+                where={
+                    "categoryName": {"in":[category_name_gir4, category_name_gir1]},
+                    "periodStartDt": datetime.datetime(2020, 1, 1), 
+                    "periodEndDt": datetime.datetime(2020, 12, 31), 
+                    "NOT": {"source": {"startsWith": "calc:"}}
+                }
+            )
             for total_emission in total_emissions:
                 if total_emission.emissionTotal is None:
                     continue
                 total_emission_gas = total_emission.emissionTotal
-                matching_item = next((item for item in totalContributionMagnitudeInSector if item['categoryName'] == relation.categoryName), None)
-    
-                if matching_item is not None and matching_item["_sum"]["contributionMagnitudeSector"] and total_emission is not None and matching_item["_sum"]["contributionMagnitudeSector"] > 0:
-                    relation.contributionRatio = (relation.contributionMagnitudeSector / matching_item["_sum"]["contributionMagnitudeSector"])
-                    await self.update(data={"contributionRatio":relation.contributionRatio}, where={"uid":relation.uid})
-                    if total_emission.pollutantId == "CO2":
-                        emission = relation.contributionRatio * total_emission_gas
-                        await em.update_or_create(data={
-                                "categoryName": relation.categoryName,
-                                "periodStartDt": total_emission.periodStartDt,
-                                "periodEndDt": total_emission.periodEndDt,
-                                "emissionTotal": emission,
-                                "pollutantId": total_emission.pollutantId,
-                                "periodLength": total_emission.periodLength,
-                                "source": "calc:"+total_emission.source,
-                                "categoryName": relation.sectorId,
-                                "categoryUid": relation.uid,
-                                "regionUid": relation.regionUid,
-                                "siteUid": relation.siteUid
+                matching_item = next(
+                    (item for item in totalContributionMagnitudeInSector if item['categoryName'] == relation.categoryName), 
+                    None
+                )
+                if matching_item and matching_item["_sum"]["contributionMagnitudeSector"] and matching_item["_sum"]["contributionMagnitudeSector"] > 0:
+                    relation.contributionRatio = relation.contributionMagnitudeSector / matching_item["_sum"]["contributionMagnitudeSector"]
+                    await self.update(
+                        data={"contributionRatio":relation.contributionRatio}, 
+                        where={"uid":relation.uid}
+                    )
+                    region = total_emission.regionName or relation.structuredAddress
+                    emission = relation.contributionRatio * total_emission_gas
+                    await self.emission_data_service.update_or_create(
+                        data={
+                            "categoryName": category_name_gir4,
+                            "periodStartDt": total_emission.periodStartDt,
+                            "periodEndDt": total_emission.periodEndDt,
+                            "emissionTotal": emission,
+                            "pollutantId": total_emission.pollutantId,
+                            "periodLength": total_emission.periodLength,
+                            "source": "calc:"+total_emission.source,
+                            "categoryUid": relation.uid,
+                            "regionUid": relation.regionUid,
+                            "siteUid": relation.siteUid,
+                            "pollutantId": total_emission.pollutantId,
+                            "regionName": total_emission.regionName,
+                            "regionUid": total_emission.regionUid,
 
-                            }, where={"categoryName": relation.categoryName, "periodStartDt": total_emission.periodStartDt, "periodEndDt": total_emission.periodEndDt, "siteUid": relation.siteUid, "pollutantId": total_emission.pollutantId, "source": "calc:"+total_emission.source, "regionUid": relation.regionUid})
-
+                        },
+                        where={
+                            "categoryName": relation.categoryName, 
+                            "periodStartDt": total_emission.periodStartDt, 
+                            "periodEndDt": total_emission.periodEndDt, 
+                            "siteUid": relation.siteUid, 
+                            "pollutantId": total_emission.pollutantId, 
+                            "source": "calc:"+total_emission.source, 
+                            "regionUid": relation.regionUid
+                        }
+                    )
     # async def api_to_gir_address(self):
     #     """
     #     Converts the API addresses to GIR addresses
