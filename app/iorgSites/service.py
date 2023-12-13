@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from typing import AsyncIterator
 from typing_extensions import Buffer
 import hashlib
@@ -19,7 +18,22 @@ from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
 from prisma import Json
 from app.config.column_mapping import code_dict
 from app.isitecategoryrels.service import ISiteCategoryRelService
+from app.utils.string import get_first_level_category
+from app.config.column_mapping import address_dict
+from app.iorgsites.adapters.address_adapter import format_address_string
 
+
+
+missing_vals = [
+2349455,
+2349456,
+2349457,
+2349458,
+2349459,
+2349460,
+2349461,
+2349463,
+]
 class IOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
@@ -327,19 +341,8 @@ class IOrgSiteService:
 
     @catch_errors_decorator
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
-        """
-        Retrieves the structured address for a given site.
-
-        Args:
-            site (prisma.models.IOrgSite): The site for which to retrieve the structured address.
-
-        Returns:
-            Tuple[str, Dict[str, Any]]: A tuple containing the structured address and the address details.
-
-        Raises:
-            Exception: If there is an error retrieving the structured address.
-        """
         request_addr = site.streetAddress or site.landAddress
+        request_addr = format_address_string(request_addr)
         response = await self.requests.request(
             KAKAO_API_BURL,
             headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
@@ -348,29 +351,27 @@ class IOrgSiteService:
             },
         )
         api_loc_response = json.loads(response.text)
-        try:
-            region1 = api_loc_response.get("documents")[0].get("address")[
-                "region_1depth_name"
-            ]
-        except:
-            region1 = None
-        try:
-            region2 = api_loc_response.get("documents")[0].get("address")[
-                "region_2depth_name"
-            ]
-        except:
-            region2 = None
-
-        try:
-            address_detail = api_loc_response.get("documents")[0]
-        except:
-            address_detail = None
+        
+        if api_loc_response.get("meta").get("total_count") == 0 and site.landAddress:
+            request_addr = site.landAddress
+            response = await self.requests.request(
+                KAKAO_API_BURL,
+                headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+                params={
+                    "query": request_addr,
+                },
+            )
+            api_loc_response = json.loads(response.text)
+        if api_loc_response.get("meta").get("total_count") == 0:
+            return None, None
+        region1 = api_loc_response.get("documents")[0].get("address", {}).get("region_1depth_name")
+        region2 = api_loc_response.get("documents")[0].get("address", {}).get("region_2depth_name")
+        address_detail = api_loc_response.get("documents")[0] if api_loc_response.get("documents") else None
 
         if region1 is None or region2 is None:
             return None, None
-        else:
-            structured_address = f"{region1}|{region2}"
 
+        structured_address = f"{region1}|{region2}"
         return structured_address, address_detail
 
     @catch_errors_decorator
@@ -411,12 +412,25 @@ class IOrgSiteService:
         return await self.prisma.iorgsite.update(
             where={"uid": site.uid},
             data={
-                "structuredAddress": structured_address,
+                "structuredAddress": address_dict.get(structured_address),
                 "addressDetails": Json(address_detail),
             },
         )
 
     async def update_relation_single(self, uid: str = None, site: prisma.models.IOrgSite = None) -> None:
+        """
+        Updates a single relation in the database.
+
+        Args:
+            uid (str, optional): The UID of the site. Defaults to None.
+            site (prisma.models.IOrgSite, optional): The site object. Defaults to None.
+
+        Raises:
+            Exception: Raised if neither site nor uid is provided.
+
+        Returns:
+            None: This function does not return anything.
+        """
         if not site and not uid:
             raise Exception("Either site or uid must be provided")
 
@@ -431,30 +445,43 @@ class IOrgSiteService:
                 logging.warn(f"Skipping {uid} as proxy field is <= 0")
                 return
             sectors = site.sectorIds.split(",")
-            sector_count = len(sectors) + 1
+            sector_count = len(sectors)
             contribution_magnitude = proxy_field / sector_count
 
-            rel_obj = []
             await self.rel_service.delete_many(where={"siteUid": uid}) #TODO: This is slower but we need to have this in order to account for chancing sectorids
             for sector in sectors:
+                sector = sector.strip()
+                second_level_sector = get_first_level_category(code_dict.get(sector)) if code_dict.get(sector) is not None else None
                 relation_obj = {
                     "siteUid": uid,
                     "sectorId": sector,
                     "contributionMagnitudeSector": contribution_magnitude,
-                    "categoryName": code_dict.get(sector),
+                    "categoryName": second_level_sector,
                     "siteAddress": site.structuredAddress,
                     "isMainSector": site.sectorIdMain == sector,
                 }
-                created_rel = await self.rel_service.update_or_create(
+                await self.rel_service.update_or_create(
                     data=relation_obj,
                     where={"siteUid": uid, "sectorId": relation_obj["sectorId"]},
                 )
-                if created_rel:
-                    rel_obj.append(created_rel)
-            return rel_obj
-
 
     async def update_relations(self) -> None:
+        """
+        Updates the relations between sites and calculates emission ratios.
+
+        This function iterates over all the sites in the database and updates their relations
+        by calling the `update_relation_single` method for each site. If any relations are updated,
+        it then calls the `calculate_emission_ratios` method of the `rel_service` to calculate the
+        emission ratios. This function is quite slow, so the alternative function should be used
+        if it is not necessary to create relations for all sites, even if they do not have mapped
+        sectors.
+
+        Parameters:
+            None
+
+        Returns:
+            None
+        """
         site_count = await self.prisma.iorgsite.count()
         pbar = tqdm(total=site_count)
         
@@ -468,11 +495,40 @@ class IOrgSiteService:
         pbar.close()
 
     async def update_site_dependency(self, uid: str) -> None:
+        """
+        Updates the site dependency with the given UID.
+
+        Args:
+            uid (str): The UID of the site.
+
+        Returns:
+            None: This function does not return anything.
+        """
         site =  await self.fetch_some(where={"uid": uid})
         if site:
             rel = await self.update_relation_single(site=site[0])
             if rel:
                 await self.rel_service.calculate_emission_ratios(rel)
+
+    async def update_relations_alt(self)-> None:
+        """
+        Update the relations of the object asynchronously. This is the alternative version of this function
+        since it only fetches the sites that are include mapped sectors.
+
+        :return: None
+        """
+        sites = await self.prisma.query_raw(
+            query = f"""
+            SELECT *
+            FROM "IOrgSite"
+            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)');
+            """, model=prisma.models.IOrgSite
+        )
+        for site in tqdm(sites, total=len(sites), desc="Updating relations"):
+            await self.update_relation_single(site=site)
+            # await self.populate_single_address(site=site)
+        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}})
+        await self.rel_service.calculate_emission_ratios(rels)
 
 
 
