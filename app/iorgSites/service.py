@@ -23,17 +23,6 @@ from app.config.column_mapping import address_dict
 from app.iorgsites.adapters.address_adapter import format_address_string
 
 
-
-missing_vals = [
-2349455,
-2349456,
-2349457,
-2349458,
-2349459,
-2349460,
-2349461,
-2349463,
-]
 class IOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
