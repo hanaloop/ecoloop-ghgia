@@ -5,7 +5,7 @@ from app.emission_data.models.partial_emission_data import create_partial_gir1
 
 def test_create_partial_gir1():
     kwargs = {
-        "total_emissions_gir1": {
+        "total_emission": {
             "emissionTotal": None
         },
         "categoryName": "Category 1"

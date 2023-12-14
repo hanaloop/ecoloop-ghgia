@@ -118,6 +118,20 @@ class IEmissionDataService():
         """
         return await self.prisma.iemissiondata.find_many(where=where)
 
+    async def fetch_one(
+        self, where: prisma.types.IEmissionDataWhereInput
+    )-> prisma.models.IEmissionData | None:
+        """
+        Fetches a single record based on the given where clause.
+
+        Args:
+            where: An input object type that represents the conditions used to filter the data.
+
+        Returns:
+            An IEmissionData object that matches the given conditions or None if no record is found.
+        """
+        return await self.prisma.iemissiondata.find_first(where=where)
+
     async def fetch_all(self) -> list[prisma.models.IEmissionData]:
         """
         Fetches all data from the OrgSite table.

@@ -1,9 +1,23 @@
+import datetime
 from typing import Union, Dict, List, get_args
 from collections import defaultdict
 import numpy as np
 import pandas as pd
 from pydantic.fields import FieldInfo
-import ast 
+import ast
+from app.utils.data_types import key_of_value
+from app.utils.data_types import diff 
+
+DEFAULT_ANNOTATIONS = {
+    "str": '',
+    "int": 0,
+    "float": 0.0,
+    "bool": False,
+    "list": [],
+    "dict": {},
+    None: None
+    
+}
 
 def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, List[str]]:
     """
@@ -30,6 +44,8 @@ def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, Lis
         else:
             # Handle non-Union types
             sorted_fields[annotation.__name__].append(field_name)
+    if "NoneType" in sorted_fields:
+        sorted_fields["NoneType"] = diff(sorted_fields["NoneType"], list(data.keys()))
 
     # Sort fields within each annotation type
     for annotation_type in sorted_fields:
@@ -63,8 +79,9 @@ def match_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]])
                 elif annotation == 'Dict':
                     data[column] = data[column].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
 
-                if "NoneType" not in sorted_annotations or column not in sorted_annotations["NoneType"]:
-                    data[column] = data[column].fillna(np.nan).replace([np.nan], [''])
+                elif annotation == 'NoneType':
+                    default_type = key_of_value(sorted_annotations, column)[1]
+                    data[column] = data[column].fillna(np.nan).replace([np.nan], DEFAULT_ANNOTATIONS[default_type])
 
             except Exception as e:
                 print(f"Error converting column {column} to {annotation}: {e}")

@@ -271,7 +271,7 @@ model ISiteCategoryRel {
   siteAddress                 String? @db.VarChar
   categoryUid                 String? @db.VarChar
   categoryName                String? // The name of the IPCC Category (e.g. 2.A.1)
-
+  categoryLevel               Int? // Level of category (2.A is 2nd level, 2.A.1 is 3rd etc.)
   sectorId                    String? @db.VarChar
   product                     String? @db.VarChar
   regionUid                   String? @db.VarChar
@@ -284,7 +284,7 @@ model ISiteCategoryRel {
   contributionRatio           Float?
 
 
-  @@unique([siteUid, sectorId])
+  @@unique([siteUid, sectorId, categoryLevel])
   @@index([categoryName])
 }
 

@@ -4,7 +4,7 @@ import openpyxl
 import pandas as pd
 
 class FileUtils:
-    async def read_to_pd(self, file_type: str, file: Buffer = None, path: str = None) -> pd.DataFrame:
+    async def read_to_pd(self, file_type: str, file: Buffer = None, path: str = None, sheet = None) -> pd.DataFrame:
         """
         Reads a file into a pandas dataframe. Generic implementation, finds file type automatically.
         """
@@ -17,17 +17,17 @@ class FileUtils:
             case "csv":
                 return await self.read_csv_to_pd(file)
             case "xlsx":
-                return await self.read_excel_to_pd(file)
+                return await self.read_excel_to_pd(file, sheet)
             case "xls":
-                return await self.read_excel_to_pd(file)
+                return await self.read_excel_to_pd(file, sheet)
             case "xml":
                 return await self.read_xml_to_pd(file)
             case _:
                 raise Exception(f"Unsupported file type: {extension}")
 
 
-    async def read_excel_to_pd(self, file: Buffer | str) -> pd.DataFrame: ##TODO: Surely this can be simplified
-        df = pd.read_excel(file).fillna("")
+    async def read_excel_to_pd(self, file: Buffer | str, sheet = None) -> pd.DataFrame: ##TODO: Surely this can be simplified
+        df = pd.read_excel(file, sheet_name=sheet).fillna("")
         df.replace("",None,inplace=True)
         return df
 
@@ -43,10 +43,10 @@ class FileUtils:
         df.replace("",None,inplace=True)
         return df
     
-    def get_excel_sheet_names(self, file: Buffer | str, data_source: str) -> list:
+    def get_excel_sheet_names(self, file: Buffer | str, path: str) -> list:
         # Check the file extension
-        _, file_extension = os.path.splitext(data_source)
-
+        _, file_extension = os.path.splitext(path)
+        print(file_extension, file_extension in ['.xlsx', '.xlsm', '.xltx', '.xltm'])
         if file_extension in ['.xlsx', '.xlsm', '.xltx', '.xltm']:
             # Use openpyxl for .xlsx files
             workbook = openpyxl.load_workbook(file, read_only=True, data_only=True)

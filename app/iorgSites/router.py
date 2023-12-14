@@ -10,7 +10,7 @@ router = APIRouter(
 
 @router.get("/")
 async def get():
-    return await service.fetch_all()
+    return await service.find_many()
 
 @router.get("/count")
 async def count():
@@ -26,7 +26,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 
 @router.get("/{uid}")
 async def get_by_id(uid):
-    return await service.fetch_some(where={"uid": uid})
+    return await service.find_many(where={"uid": uid})
 
 @router.delete("/") ##TODO: Need auth
 async def delete(where = None):

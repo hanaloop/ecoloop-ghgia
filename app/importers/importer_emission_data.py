@@ -14,16 +14,18 @@ class EmissionDataImporter:
 
         Args:
             filepath (str): The path to the file containing the data.
+            adapter (Adapter, optional): The adapter to use for the data. Defaults to None.
 
         Returns:
             None
         """
+        adapter = adapters
         files = FileUtils()
         if not adapter: #TODO: Later select adapters accordingly
             file_type = files.get_file_extension(filepath)
             df_data = await files.read_to_pd(path=filepath, file_type=file_type)
         else :
-            df_data = await adapters.prepare(data_source="gir4", file=filepath)
+            df_data = await adapters.prepare(path=filepath, data_source=filepath)
         data_format = sort_fields_by_inner_annotation(prisma.models.IEmissionData.model_fields)
         formatted_df = match_to_types(data=df_data, sorted_annotations=data_format)
         for row in tqdm(formatted_df.to_dict(orient="records"), total=len(formatted_df)):

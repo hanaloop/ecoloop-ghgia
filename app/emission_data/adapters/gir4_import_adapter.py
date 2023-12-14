@@ -12,6 +12,11 @@ class GirCategoryAdapter:
         self.current_alpha = "1"
         self.previous_values = {'first': '', 'second': '', 'third': '', 'fourth': '', 'fifth':''}
 
+    
+    def __reset(self):
+        self.current_alpha = "1"
+        self.previous_values = {'first': '', 'second': '', 'third': '', 'fourth': '', 'fifth':''}
+
     def __transform_category_value(self, value, previous_values): #TODO: Need to fix to remove spaces, and . at the end of values
             """_summary_
             It transforms the values in the gir table to match the IPCC codes, by matching the starting
@@ -76,6 +81,7 @@ class GirCategoryAdapter:
         df.drop(df.index[136:],inplace=True) #skipping columns that do not contain data
         # Apply the adjusted transformation
         df["분야·부문/연도"] = df["분야·부문/연도"].apply(lambda x: self.__transform_category_value(x, self.previous_values))
+        self.__reset()
         return df
 
     async def __prepare_for_db(self, df:pd.DataFrame, sheet_name: str):
@@ -104,15 +110,16 @@ class GirCategoryAdapter:
             emission_data_df = pd.concat([emission_data_df, temp_df], ignore_index=True)
         non_float_pattern = r'^(?!-?\d*\.\d*$).*$'
         emission_data_df["emissionTotal"] = emission_data_df["emissionTotal"].replace(non_float_pattern, None, regex=True)
+        emission_data_df["emissionTotal"] = emission_data_df["emissionTotal"].astype(float)
         emission_data_df = emission_data_df.replace({np.nan: None})
         return emission_data_df
     
     async def prepare(self, data_source: str, buffer: Buffer = None, path: str = None) -> pd.DataFrame:
         files = FileUtils()
-        sheets = files.get_excel_sheet_names(buffer, data_source)
+        sheets = files.get_excel_sheet_names(buffer or path, data_source)
         emission_data_df = pd.DataFrame()
         for sheet in list(set(sheets) & set(SHEETS_TO_READ)):
-            df = await files.read_to_pd("xlsx", buffer)
+            df = await files.read_to_pd("xlsx", buffer or path, sheet= sheet)
             df = await self.__process_data(df)
             df = await self.__prepare_for_db(df, sheet)
             emission_data_df = pd.concat([emission_data_df, df], ignore_index=True)

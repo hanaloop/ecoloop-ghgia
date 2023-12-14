@@ -5,7 +5,7 @@ import datetime
 from prisma.models import IEmissionData
 
 def create_partial_gir1(**kwargs) -> IEmissionData:
-    total_emissions_gir1 = IEmissionData.model_construct(**kwargs.get("total_emissions_gir1", {}))
+    total_emissions_gir1 = IEmissionData.model_construct(**kwargs.get("total_emission", {}))
     total_emissions_gir1.emissionTotal = total_emissions_gir1.emissionTotal or 0
     total_emissions_gir1.categoryName = kwargs.get("categoryName")
     total_emissions_gir1.pollutantId = "CO2eq"

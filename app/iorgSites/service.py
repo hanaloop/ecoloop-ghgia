@@ -18,7 +18,7 @@ from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
 from prisma import Json
 from app.config.column_mapping import code_dict
 from app.isitecategoryrels.service import ISiteCategoryRelService
-from app.utils.string import get_first_level_category
+from app.utils.string import get_second_level_category, get_category_list
 from app.config.column_mapping import address_dict
 from app.iorgsites.adapters.address_adapter import format_address_string
 
@@ -126,7 +126,7 @@ class IOrgSiteService:
         return await self.prisma.iorgsite.delete(where=where)
 
     @catch_errors_decorator
-    async def fetch_some(
+    async def find_many(
         self,
         where: prisma.types.IOrgSiteWhereInput,
         include: prisma.types.IOrgSiteInclude | None = None,
@@ -328,7 +328,6 @@ class IOrgSiteService:
             # await self.update_relation_single(site=upserted_row)
         return upserted_data
 
-    @catch_errors_decorator
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
         request_addr = site.streetAddress or site.landAddress
         request_addr = format_address_string(request_addr)
@@ -342,7 +341,7 @@ class IOrgSiteService:
         api_loc_response = json.loads(response.text)
         
         if api_loc_response.get("meta").get("total_count") == 0 and site.landAddress:
-            request_addr = site.landAddress
+            request_addr = format_address_string(site.landAddress)
             response = await self.requests.request(
                 KAKAO_API_BURL,
                 headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
@@ -352,13 +351,21 @@ class IOrgSiteService:
             )
             api_loc_response = json.loads(response.text)
         if api_loc_response.get("meta").get("total_count") == 0:
-            return None, None
-        region1 = api_loc_response.get("documents")[0].get("address", {}).get("region_1depth_name")
-        region2 = api_loc_response.get("documents")[0].get("address", {}).get("region_2depth_name")
-        address_detail = api_loc_response.get("documents")[0] if api_loc_response.get("documents") else None
+            try:
+                region1 = request_addr.split(" ")[0]
+                region2 = request_addr.split(" ")[1]
+                region1.strip()
+                region2.strip()
+                address_detail = {"type":"auto_parsed"}
+            except:
+                return None, None
+        else:
+            region1 = api_loc_response.get("documents")[0].get("address", {}).get("region_1depth_name")
+            region2 = api_loc_response.get("documents")[0].get("address", {}).get("region_2depth_name")
+            address_detail = api_loc_response.get("documents")[0] if api_loc_response.get("documents") else None
 
-        if region1 is None or region2 is None:
-            return None, None
+            if region1 is None or region2 is None:
+                return None, None
 
         structured_address = f"{region1}|{region2}"
         return structured_address, address_detail
@@ -374,7 +381,7 @@ class IOrgSiteService:
         Raises:
             Exception: If an error occurs during the population of addresses.
         """
-        sites = await self.fetch_some(where={"structuredAddress": None})
+        sites = await self.find_many(where={"structuredAddress": None})
         for site in tqdm(sites, total=len(sites)):
             await self.populate_single_address(site)
 
@@ -401,14 +408,14 @@ class IOrgSiteService:
         return await self.prisma.iorgsite.update(
             where={"uid": site.uid},
             data={
-                "structuredAddress": address_dict.get(structured_address),
+                "structuredAddress": address_dict.get(structured_address) or structured_address,
                 "addressDetails": Json(address_detail),
             },
         )
 
     async def update_relation_single(self, uid: str = None, site: prisma.models.IOrgSite = None) -> None:
         """
-        Updates a single relation in the database.
+        Creates (or Updates) relation per category level of a single site in the database.
 
         Args:
             uid (str, optional): The UID of the site. Defaults to None.
@@ -440,19 +447,25 @@ class IOrgSiteService:
             await self.rel_service.delete_many(where={"siteUid": uid}) #TODO: This is slower but we need to have this in order to account for chancing sectorids
             for sector in sectors:
                 sector = sector.strip()
-                second_level_sector = get_first_level_category(code_dict.get(sector)) if code_dict.get(sector) is not None else None
-                relation_obj = {
-                    "siteUid": uid,
-                    "sectorId": sector,
-                    "contributionMagnitudeSector": contribution_magnitude,
-                    "categoryName": second_level_sector,
-                    "siteAddress": site.structuredAddress,
-                    "isMainSector": site.sectorIdMain == sector,
-                }
-                await self.rel_service.update_or_create(
-                    data=relation_obj,
-                    where={"siteUid": uid, "sectorId": relation_obj["sectorId"]},
-                )
+                sector_conv = code_dict.get(sector)
+                category_list = get_category_list(sector_conv, return_lvl_from=2, return_lvl_to=3) if sector_conv else []
+                for category in category_list:
+                    lvl = len(category.split("."))
+                    relation_obj = {
+                        "siteUid": uid,
+                        "sectorId": sector,
+                        "contributionMagnitudeSector": contribution_magnitude,
+                        "categoryName": category,
+                        "siteAddress": site.structuredAddress,
+                        "isMainSector": site.sectorIdMain == sector,
+                        "categoryLevel": lvl,
+                        "structuredAddress": site.structuredAddress,
+                    }
+                    # At the moment we are always creating as we delete (see above)
+                    await self.rel_service.update_or_create(
+                        data=relation_obj,
+                        where={"siteUid": uid, "sectorId": relation_obj["sectorId"], 'categoryLevel': lvl},
+                    )
 
     async def update_relations(self) -> None:
         """
@@ -493,7 +506,7 @@ class IOrgSiteService:
         Returns:
             None: This function does not return anything.
         """
-        site =  await self.fetch_some(where={"uid": uid})
+        site =  await self.find_many(where={"uid": uid})
         if site:
             rel = await self.update_relation_single(site=site[0])
             if rel:
@@ -506,16 +519,16 @@ class IOrgSiteService:
 
         :return: None
         """
-        sites = await self.prisma.query_raw(
-            query = f"""
-            SELECT *
-            FROM "IOrgSite"
-            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)');
-            """, model=prisma.models.IOrgSite
-        )
-        for site in tqdm(sites, total=len(sites), desc="Updating relations"):
-            await self.update_relation_single(site=site)
-            # await self.populate_single_address(site=site)
+        # sites = await self.prisma.query_raw(
+        #     query = f"""
+        #     SELECT *
+        #     FROM "IOrgSite"
+        #     WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS  NULL;
+        #     """, model=prisma.models.IOrgSite
+        # )
+        # for site in tqdm(sites, total=len(sites), desc="Updating relations"):
+        #     # await self.update_relation_single(site=site)
+        #     await self.populate_single_address(site=site)
         rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}})
         await self.rel_service.calculate_emission_ratios(rels)
 
