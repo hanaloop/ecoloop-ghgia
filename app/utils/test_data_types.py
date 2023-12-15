@@ -2,6 +2,9 @@ import pytest
 
 from app.utils.data_types import key_of_value, to_dict
 
+class TestObject:
+    def __init__(self, x):
+        self.x = x
 def test_dict_conversion():
     # Testing conversion of an object with __dict__ attribute
     obj = {"key1": "value1", "key2": "value2"}
@@ -9,7 +12,8 @@ def test_dict_conversion():
 
 def test_non_dict_conversion():
     # Testing conversion of an object without __dict__ attribute
-    obj = "test"
+
+    obj = TestObject(5)
     assert to_dict(obj) == obj
 
 def test_empty_dict_conversion():

@@ -244,6 +244,8 @@ model IOrgSite {
   organization               IOrganization?  @relation(fields: [organizationUid], references: [uid], onDelete: SetNull)  //  
 
   addressDetails             Json?    @default("{}")  //  FKA addressDetails, pulled from Address API
+  longitude                  Float?  
+  latitude                   Float?  
 
   siteCategoryRels           ISiteCategoryRel[]  //  
   emissionData               IEmissionData[]
@@ -318,8 +320,8 @@ model IEmissionData {
   regionUid           String?  @db.VarChar
   region              Region?  @relation(fields: [regionUid], references: [uid], onDelete: SetNull)
 
-  latitude            Int?
-  longitude           Int?
+  latitude            Float?
+  longitude           Float?
 
   /// Name of the sector, may be a sector not defined in the sector table
   sectorName          String?  @db.VarChar

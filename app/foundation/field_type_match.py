@@ -1,4 +1,4 @@
-import datetime
+import json
 from typing import Union, Dict, List, get_args
 from collections import defaultdict
 import numpy as np
@@ -54,7 +54,7 @@ def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, Lis
     return dict(sorted_fields)
 
 
-def match_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]]) -> pd.DataFrame:
+def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]]) -> pd.DataFrame:
     data = data.replace({np.nan: None})
     for annotation, columns in sorted_annotations.items():
         for column in columns:
@@ -85,5 +85,53 @@ def match_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]])
 
             except Exception as e:
                 print(f"Error converting column {column} to {annotation}: {e}")
+
+    return data
+
+def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
+    for annotation in sorted_annotations.keys():
+        for key, value in data.items():
+            if key not in sorted_annotations[annotation]:
+                continue
+
+        
+            try:
+                if annotation == 'datetime':
+                    if value is not None:
+                        ##TODO: This is WIP
+                        pass
+                elif annotation == 'int':
+                    if value is not None:
+                        data[key] = int(value)
+                elif annotation == 'float':
+                    if value is not None:
+                        data[key] = float(value)
+                elif annotation == 'bool':
+                    if value is not None:
+                        data[key] = True if value == "True" else False if value == "False" else value
+                elif annotation == 'str':
+                    if value is not None:
+                        data[key] = str(value)
+                elif annotation == 'Json':
+                    if value is None:
+                        data[key] = '{}'
+                    else:
+                        data[key] = json.dumps(value)
+                elif annotation == 'List':
+                    if isinstance(value, str):
+                        data[key] = ast.literal_eval(value)
+                    else:
+                        data[key] = []
+                elif annotation == 'Dict':
+                    if isinstance(value, str):
+                        data[key] = ast.literal_eval(value)
+                    else:
+                        data[key] = {}
+                ##TODO: This is WIP
+                # if "NoneType" not in sorted_annotations.get(key, []) and value is None:
+                #     data[key] = ''
+
+            except Exception as e:
+                print(f"Error converting data for key {key} to {annotation}: {e}")
 
     return data

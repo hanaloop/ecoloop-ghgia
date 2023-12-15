@@ -26,3 +26,9 @@ def get_category_list(x: str, return_lvl_from: int, return_lvl_to: int | None = 
     for i in range(return_lvl_from, return_lvl_to+1):
         lvl_list.append(".".join(x.split('.')[:i]))
     return lvl_list
+
+def get_coords_from_detail(detail: dict):
+    latitude = detail.get('latitude', None)
+    longitude = detail.get('longitude', None)
+    return latitude, longitude
+

@@ -4,7 +4,7 @@ import prisma
 from tqdm import tqdm
 from app.database import get_connection
 from app.iorgsites.service import IOrgSiteService
-from app.config.column_mapping import code_dict
+from app.config.column_mapping import ipcc_to_gir
 
 service = IOrgSiteService()
 async def main():
@@ -14,7 +14,7 @@ async def main():
         query = f"""
         SELECT *
         FROM "IOrgSite"
-        WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS NULL;
+        WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(ipcc_to_gir.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS NULL;
         """
     )
     for site in tqdm(sites, total=len(sites)):

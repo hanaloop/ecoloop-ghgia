@@ -342,7 +342,8 @@ class ISiteCategoryRelService:
                         "regionUid": relation.regionUid,
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,
-                        "regionName": relation.region,
+                        "regionName": relation.site.addressSubRegion.split(" ")[0] if relation.site.addressSubRegion else None,
+                        "addressRegionUid": relation.site.addressRegionUid,
                     },
                     where={
                         "categoryName": relation.categoryName,
