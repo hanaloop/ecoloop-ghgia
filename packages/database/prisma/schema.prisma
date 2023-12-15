@@ -183,7 +183,7 @@ model IOrgSite {
   addressRegionName          String?  @db.VarChar // (FKA: province) 시도
   addressRegionUid           String?   @db.VarChar
   addressRegion              Region?   @relation(fields: [addressRegionUid], references: [uid], onDelete: SetNull)
-
+  addressFixed               String?  @db.VarChar
   /// County (Orange County). 구 (강동구)
   addressSubRegion           String?  @db.VarChar // KFA: cityDistrict, 시군구
   /// City (Mountain View). 동 (성내동)

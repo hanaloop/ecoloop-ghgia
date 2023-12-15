@@ -20,7 +20,7 @@ from app.config.column_mapping import code_dict
 from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.string import get_second_level_category, get_category_list
 from app.config.column_mapping import address_dict
-from app.iorgsites.adapters.address_adapter import format_address_string
+from app.iorgsites.adapters.address_adapter import fix_address_string
 
 
 class IOrgSiteService:
@@ -147,6 +147,18 @@ class IOrgSiteService:
             where=where, include=include, order=order
         )
 
+    async def find_one(self, where: prisma.types.IOrgSiteWhereInput, include=None) -> prisma.models.IOrgSite:
+        """
+        Fetches a single record based on the given where clause.
+
+        Args:
+            where: An input object type that represents the conditions used to filter the data.
+
+        Returns:
+            A single IOrgSite object that matches the given conditions.
+        """
+        return await self.prisma.iorgsite.find_first(where=where, include=include)
+    
     @catch_errors_decorator
     async def fetch_all(self) -> list[prisma.models.IOrgSite]:
         """
@@ -330,7 +342,7 @@ class IOrgSiteService:
 
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
         request_addr = site.streetAddress or site.landAddress
-        request_addr = format_address_string(request_addr)
+        request_addr = fix_address_string(request_addr)
         response = await self.requests.request(
             KAKAO_API_BURL,
             headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
@@ -341,7 +353,7 @@ class IOrgSiteService:
         api_loc_response = json.loads(response.text)
         
         if api_loc_response.get("meta").get("total_count") == 0 and site.landAddress:
-            request_addr = format_address_string(site.landAddress)
+            request_addr = fix_address_string(site.landAddress)
             response = await self.requests.request(
                 KAKAO_API_BURL,
                 headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
@@ -388,7 +400,7 @@ class IOrgSiteService:
     @catch_errors_decorator
     async def populate_single_address(
         self, uid: str= None, site: prisma.models.IOrgSite = None
-    ) -> None:
+    ) -> prisma.models.IOrgSite | None:
         """
         Populates a single address for a given site.
 
@@ -396,8 +408,10 @@ class IOrgSiteService:
             - site (prisma.models.IOrgSite): The site for which to populate the address.
 
         Returns:
-            None
+            prisma.models.IOrgSite | None: The updated site object.
         """
+        if not site and not uid:
+            raise Exception("Neither site nor uid is provided.")
         if site is None:
             site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
         elif uid is None:
@@ -457,7 +471,7 @@ class IOrgSiteService:
                         "contributionMagnitudeSector": contribution_magnitude,
                         "categoryName": category,
                         "siteAddress": site.structuredAddress,
-                        "isMainSector": site.sectorIdMain == sector,
+                        "isMainSector": site.sectorIdMain == sector if site.sectorIdMain and site.sectorIdMain else None,
                         "categoryLevel": lvl,
                         "structuredAddress": site.structuredAddress,
                     }
@@ -519,16 +533,16 @@ class IOrgSiteService:
 
         :return: None
         """
-        # sites = await self.prisma.query_raw(
-        #     query = f"""
-        #     SELECT *
-        #     FROM "IOrgSite"
-        #     WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS  NULL;
-        #     """, model=prisma.models.IOrgSite
-        # )
-        # for site in tqdm(sites, total=len(sites), desc="Updating relations"):
-        #     # await self.update_relation_single(site=site)
-        #     await self.populate_single_address(site=site)
+        sites = await self.prisma.query_raw(
+            query = f"""
+            SELECT *
+            FROM "IOrgSite"
+            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS  NULL;
+            """, model=prisma.models.IOrgSite
+        )
+        for site in tqdm(sites, total=len(sites), desc="Updating relations"):
+            await self.update_relation_single(site=site)
+            await self.populate_single_address(site=site)
         rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}})
         await self.rel_service.calculate_emission_ratios(rels)
 

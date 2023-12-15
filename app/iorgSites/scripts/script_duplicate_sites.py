@@ -7,6 +7,10 @@ from app.iorgsites.service import IOrgSiteService
 service = IOrgSiteService()
 
 file = FileUtils()
+""" This script returns records which have same {list of fields}
+The result is used to verify the number of unique records, and record changes within the file """
+
+
 async def main():
     test = await file.read_to_pd(path="app/.seed_data/factoryOnData.xlsx", file_type="xlsx")
     test.rename(columns=iorgsite_map, inplace=True)

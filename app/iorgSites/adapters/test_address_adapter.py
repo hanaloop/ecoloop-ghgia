@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-from app.iorgsites.adapters.address_adapter import format_address_df, format_address_string
+from app.iorgsites.adapters.address_adapter import format_address_df, fix_address_string
 
 @pytest.fixture
 def sample_dataframe():
@@ -26,24 +26,24 @@ def test_format_address_df(sample_dataframe):
 def test_address_with_parentheses():
     address = "서울시 강남구 역삼동 123번지 (4층)"
     expected = "서울시 강남구 역삼동"
-    assert format_address_string(address) == expected
+    assert fix_address_string(address) == expected
 
 def test_address_with_korean_address():
     address = "부산시 해운대구 우동 456필지"
     expected = "부산시 해운대구 우동"
-    assert format_address_string(address) == expected
+    assert fix_address_string(address) == expected
 
 def test_address_with_outer_pattern():
     address = "대구시 중구 동인동 외 외"
     expected = "대구시 중구 동인동"
-    assert format_address_string(address) == expected
+    assert fix_address_string(address) == expected
 
 def test_address_with_outer_whitespace():
     address = "인천시 남구 남동 외"
     expected = "인천시 남구 남동"
-    assert format_address_string(address) == expected
+    assert fix_address_string(address) == expected
 
 def test_address_with_bonzi():
     address = "인천시 남구 남동 34번지"
     expected = "인천시 남구 남동"
-    assert format_address_string(address) == expected
+    assert fix_address_string(address) == expected

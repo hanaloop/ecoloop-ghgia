@@ -65,13 +65,13 @@ def match_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]])
                 if annotation == 'datetime':
                     data[column] = pd.to_datetime(data[column], format="ISO8601").replace({np.nan: None})
                 elif annotation == 'int':
-                    data[column] = data[column].apply(lambda x: int(x) if x is not None else None)
+                    data[column] = data[column].apply(lambda x: int(x) if x is not None else 0)
                 elif annotation == 'float':
-                    data[column] = data[column].apply(lambda x: float(x) if x is not None else None)
+                    data[column] = data[column].apply(lambda x: float(x) if x is not None else 0.0)
                 elif annotation == 'bool':
                     data[column] = data[column].apply(lambda x: True if x == "True" else False if x == "False" else x if x is not None else None)
                 elif annotation == 'str':
-                    data[column] = data[column].apply(lambda x: str(x) if x is not None else None)
+                    data[column] = data[column].apply(lambda x: str(x) if x is not None else '')
                 elif annotation == 'Json':
                     data[column] = data[column].fillna('{}')
                 elif annotation == 'List':

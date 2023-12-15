@@ -30,5 +30,10 @@ class EmissionDataImporter:
         formatted_df = match_to_types(data=df_data, sorted_annotations=data_format)
         for row in tqdm(formatted_df.to_dict(orient="records"), total=len(formatted_df)):
             new_row = {key: value for key, value in row.items() if value is not None}
-            await service.create(data=new_row)                                  
+            try:
+                await service.update_or_create(data=new_row, where={"source": new_row["source"], "categoryName": new_row["categoryName"], "periodStartDt": new_row["periodStartDt"], "periodEndDt": new_row["periodEndDt"], "pollutantId": new_row["pollutantId"]})
+            except Exception as e:
+                print(f'Error: row {new_row} failed. Perhaps it already exists.')   
+            finally:
+                pass
         
