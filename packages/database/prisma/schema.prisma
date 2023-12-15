@@ -183,7 +183,7 @@ model IOrgSite {
   addressRegionName          String?  @db.VarChar // (FKA: province) 시도
   addressRegionUid           String?   @db.VarChar
   addressRegion              Region?   @relation(fields: [addressRegionUid], references: [uid], onDelete: SetNull)
-
+  addressFixed               String?  @db.VarChar
   /// County (Orange County). 구 (강동구)
   addressSubRegion           String?  @db.VarChar // KFA: cityDistrict, 시군구
   /// City (Mountain View). 동 (성내동)
@@ -246,7 +246,7 @@ model IOrgSite {
   addressDetails             Json?    @default("{}")  //  FKA addressDetails, pulled from Address API
 
   siteCategoryRels           ISiteCategoryRel[]  //  
-
+  emissionData               IEmissionData[]
   @@index([uid])
   @@index([keyHash])
 }
@@ -264,14 +264,14 @@ model ISiteCategoryRel {
   additionalProps             Json?   @default("{}") // aka additionalAttributes
   notes                       String?
 
-  organizationUid             String @db.VarChar
+  organizationUid             String? @db.VarChar
   siteUid                     String? @db.VarChar
   site                        IOrgSite? @relation(fields: [siteUid], references: [uid], onDelete: SetNull)
 
   siteAddress                 String? @db.VarChar
   categoryUid                 String? @db.VarChar
   categoryName                String? // The name of the IPCC Category (e.g. 2.A.1)
-
+  categoryLevel               Int? // Level of category (2.A is 2nd level, 2.A.1 is 3rd etc.)
   sectorId                    String? @db.VarChar
   product                     String? @db.VarChar
   regionUid                   String? @db.VarChar
@@ -284,7 +284,7 @@ model ISiteCategoryRel {
   contributionRatio           Float?
 
 
-  @@unique([siteUid, sectorId])
+  @@unique([siteUid, sectorId, categoryLevel])
   @@index([categoryName])
 }
 
@@ -328,6 +328,7 @@ model IEmissionData {
 
   organizationUid     String?  @db.VarChar
   siteUid             String?  @db.VarChar
+  site                IOrgSite? @relation(fields: [siteUid], references: [uid], onDelete: SetNull)
 
   periodLength	      String   @db.VarChar(10) 
   periodStartDt	      DateTime
@@ -341,12 +342,13 @@ model IEmissionData {
   emissionTotal       Float
 
   // TODO: add pollutantId in 
-  @@unique([periodStartDt, periodEndDt, regionUid, categoryUid, pollutantId])
+  @@unique([periodStartDt, periodEndDt, regionUid, categoryUid, pollutantId, siteUid, source])
 
   // TODO: add index - @@unique([periodStartDt, periodEndDt, latitude, longitude, pollutantId, categoryUid])
   @@index([status])
   @@index([source])
   @@index([categoryUid])
+  @@index([categoryName])
   @@index([countryId])
   @@index([regionName])
   @@index([regionUid])

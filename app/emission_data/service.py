@@ -116,6 +116,20 @@ class IEmissionDataService():
         Returns:
             A list of IEmissionData objects that match the given conditions.
         """
+        return await self.prisma.iemissiondata.find_many(where=where)
+
+    async def fetch_one(
+        self, where: prisma.types.IEmissionDataWhereInput
+    )-> prisma.models.IEmissionData | None:
+        """
+        Fetches a single record based on the given where clause.
+
+        Args:
+            where: An input object type that represents the conditions used to filter the data.
+
+        Returns:
+            An IEmissionData object that matches the given conditions or None if no record is found.
+        """
         return await self.prisma.iemissiondata.find_first(where=where)
 
     async def fetch_all(self) -> list[prisma.models.IEmissionData]:
@@ -140,7 +154,7 @@ class IEmissionDataService():
         await self.prisma.iemissiondata.create_many(data=data)
 
     async def group_by(
-        self, count=None, by=None, sum=None, order=None, having=None
+        self, count=None, by=None, sum=None, order=None, having=None, where: prisma.types.IEmissionDataWhereInput = None
     ) -> list[prisma.models.IEmissionData]:
         """
         A decorator that catches any errors that occur during the execution of the `group_by` function.
@@ -156,7 +170,7 @@ class IEmissionDataService():
             list[prisma.models.IEmissionData]: A list of `prisma.models.IEmissionData` objects.
         """
         return await self.prisma.iemissiondata.group_by(
-            count=count, by=by, sum=sum, order=order, having=having
+            count=count, by=by, sum=sum, order=order, having=having, where=where
         )
 
     async def _fetch_page(

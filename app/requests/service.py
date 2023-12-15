@@ -2,7 +2,7 @@ from httpx import Headers, QueryParams
 import httpx
 from aiolimiter import AsyncLimiter
 
-MAX_CALLS_PER_SECOND = 1
+MAX_CALLS_PER_SECOND = 20
 MAX_CALLS_PER_MINUTE = MAX_CALLS_PER_SECOND * 60
 MAX_CALLS_PER_HOUR = MAX_CALLS_PER_MINUTE * 60
 MAX_CALLS_PER_DAY = MAX_CALLS_PER_HOUR * 24
@@ -16,7 +16,7 @@ ONE_DAY = 24 * ONE_HOUR
 class RequestService:
     def __init__(self) -> None:
         self.__client = httpx.AsyncClient()
-        self.rate_limit = AsyncLimiter(MAX_CALLS_PER_SECOND, MAX_CALLS_PER_SECOND)
+        self.rate_limit = AsyncLimiter(MAX_CALLS_PER_SECOND, 1)
 
     async def __request__(self, base_url: str, headers: Headers, params: QueryParams):
         """
