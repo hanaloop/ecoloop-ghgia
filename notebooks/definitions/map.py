@@ -24,7 +24,7 @@ class MapChartGroup:
 
     def add_to_group(self, data: pd.DataFrame, group_name: Optional[str] = None, bubble_message: str = "", colour: str = "#007BB8") -> None:
         """
-        Adds data to a group.
+        Adds data to a map chart group.
 
         Args:
             data: The data to be added.
@@ -68,7 +68,7 @@ class MapChartGroup:
 class MapChart:
     def __init__(self, x: float, y: float, first_bar: float = 0, colour: str = "blue") -> None:
         """
-        Initialize the class with the given coordinates and optional parameters.
+        Initialize the mapchart with the given coordinates and optional parameters.
         
         Parameters:
             x (float): The x-coordinate.
@@ -109,9 +109,21 @@ class MapDefs:
     def __init__(self, scaler: MinMaxScaler = None) -> None:
         self.scaler = scaler
 
-    def single(self, data, scale: bool = True, bubble_message: str = "", colour: str = "#007BB8") -> List[MapChart]:
+    def single(self, data: pd.DataFrame | List, scale: bool = True, bubble_message: str = "", colour: str = "#007BB8") -> List[MapChart]:
+        """
+        create an layer of objects on a map. This will contain only one set of data
+
+        Args:
+            data (pd.DataFrame | List): The data to be used for generating the MapChart objects. It can be either a pandas DataFrame or a list.
+            scale (bool, optional): Whether to scale the data. Defaults to True.
+            bubble_message (str, optional): The message to be displayed in the bubble popup. Defaults to "".
+            colour (str, optional): The color of the MapChart objects. Defaults to "#007BB8".
+
+        Returns:
+            List[MapChart]: A list of MapChart objects representing the generated MapCharts.
+        """
         layers = []
-        df = pd.DataFrame.from_records(data)
+        df = pd.DataFrame.from_records(data) if type(data) != pd.DataFrame else data
         if scale:
             df["norm"] = self.scaler.fit_transform(df[["emissionTotal"]])
         # try:
@@ -140,16 +152,38 @@ class MapDefs:
     
     def group(self, data: list[GroupData],  chart_group: MapChartGroup,  reference_data_name: str, reference_value_name : str,  bubble_message: str = "") -> List[MapChart]:
         """
+        create an layer of objects on a map. This will contain multiple sets of data
+
+        Args:
+            data (list[GroupData]): The data to be used for generating the MapChart objects.
+            chart_group (MapChartGroup): The MapChartGroup object to add the MapChart objects to.
+            reference_data_name (str): The name of the data that the rest of the data will be fitted on.
+            reference_value_name (str): The name of the value that will be used for fitting.
+            bubble_message (str, optional): The message to be displayed in the bubble popup. Defaults to "".
+
+        Returns:
+            List[MapChart]: A list of MapChart objects representing the generated MapCharts.
         NOTE: Currently, the reference_data_name (the data that the rest will be fitted on) must be first in the passed dict
         """
         for group_data in data:
             if group_data["name"] == reference_data_name:
-                chart_group.add_to_group(self.__prepare_data__(group_data["data"], fit=True, reference_value_name=reference_value_name), group_data["name"], colour=group_data["colour"])
+                chart_group.add_to_group(self.__prepare_data__(group_data["data"], fit=True, reference_value_name=reference_value_name), group_data["name"], colour=group_data["colour"], bubble_message=bubble_message)
             else:
-                chart_group.add_to_group(self.__prepare_data__(group_data["data"], fit=False, reference_value_name=reference_value_name), group_data["data"], colour=group_data["colour"])
+                chart_group.add_to_group(self.__prepare_data__(group_data["data"], fit=False, reference_value_name=reference_value_name), group_data["data"], colour=group_data["colour"], bubble_message=bubble_message)
             
 
     def __prepare_data__(self, data: List, fit=True, reference_value_name: str = None):
+        """
+        Prepare the data for modeling.
+
+        Args:
+            data (List): The input data.
+            fit (bool, optional): Whether to fit the scaler. Defaults to True.
+            reference_value_name (str, optional): The name of the reference value. Defaults to None.
+
+        Returns:
+            pd.DataFrame: The prepared data.
+        """
         df = pd.DataFrame.from_records(data=data)
         if fit:
             df["norm"] = self.scaler.fit_transform(df[reference_value_name].values[:, None])

@@ -1,4 +1,4 @@
-from app.utils.string import get_coords_from_detail, get_second_level_category
+from app.utils.string import get_coords_from_detail, get_regions_as_tuple, get_second_level_category
 from app.utils.string import get_category_list
 
 def test_get_first_level_category():
@@ -51,3 +51,31 @@ def test_neither_coord_exists():
     detail = {}
     expected_result = (None, None)
     assert get_coords_from_detail(detail) == expected_result
+
+import pytest
+
+def test_get_regions_as_tuple_empty_address_detail():
+    address_detail = {}
+    expected_result = (None, None, None)
+    assert get_regions_as_tuple(address_detail) == expected_result
+
+def test_get_regions_as_tuple_missing_region_fields():
+    address_detail = {
+        "address": {
+            "region_1depth_name": "Region 1",
+            "region_3depth_name": "Region 3"
+        }
+    }
+    expected_result = ("Region 1", None, "Region 3")
+    assert get_regions_as_tuple(address_detail) == expected_result
+
+def test_get_regions_as_tuple_all_region_fields_present():
+    address_detail = {
+        "address": {
+            "region_1depth_name": "Region 1",
+            "region_2depth_name": "Region 2",
+            "region_3depth_name": "Region 3"
+        }
+    }
+    expected_result = ("Region 1", "Region 2", "Region 3")
+    assert get_regions_as_tuple(address_detail) == expected_result

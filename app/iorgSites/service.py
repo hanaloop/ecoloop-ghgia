@@ -22,10 +22,8 @@ from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.string import get_category_list
 from app.config.column_mapping import address_dict
 from app.iorgsites.adapters.address_adapter import fix_address_string
-from app.utils.string import get_coords_from_detail
+from app.utils.string import get_coords_from_detail, get_parent_region, get_regions_as_tuple
 
-
-requests = RequestService()
 
 
 class IOrgSiteService:
@@ -441,6 +439,16 @@ class IOrgSiteService:
             site
         )
         latitude, longitude = get_coords_from_detail(address_detail)
+        if not address_detail.get("type") == "auto_parsed":
+            region, subregion = get_regions_as_tuple(address_dict.get(structured_address), site=site)
+        else:
+            region, subregion = get_regions_as_tuple(structured_address, site=site)
+        site.addressRegionName = region or None
+        site.addressSubRegion = subregion or None
+        if region and subregion:
+            site = await self.connect_address(site)
+        if latitude is None or longitude is None:
+            latitude, longitude = site.latitude, site.longitude
         return await self.prisma.iorgsite.update(
             where={"uid": site.uid},
             data={
@@ -448,7 +456,8 @@ class IOrgSiteService:
                 "addressDetails": Json(address_detail),
                 "latitude": latitude,
                 "longitude": longitude,
-
+                "addressRegionName": region,
+                "addressSubRegion": subregion
             },
         )
 
@@ -462,25 +471,25 @@ class IOrgSiteService:
         Returns:
             None
         """
-        district = site.addressSubRegion
+        # district = get_parent_region(site.addressRegionName) if site.addressRegionName else None
 
-        if not district:
-            return
+        # if not district:
+        #     return
 
-        region = site.addressRegionName.split(' ')[0] if site.addressRegionName else None
+        # FOR SOME REASON INTELLISENSE GAVE ERROR WITH THIS COMMENT region = get_parent_region(site.addressRegionName) if site.addressRegionName else None
         addressRegion = await self.region_service.fetch_one(
             where={
-                "name": district.split(' ')[0],
+                "name": site.addressSubRegion,
                 "parent": {
-                    "is": {"name": region}
+                    "is": {"name": site.addressRegionName}
                 }
             }
         )
 
         if addressRegion is None:
-            return
+            return site
 
-        await self.update(
+        return  await self.update(
             data={"addressRegionUid": addressRegion.uid}, where={"uid": site.uid}, include={"addressRegion": True}
         )
 
@@ -578,9 +587,10 @@ class IOrgSiteService:
         Returns:
             None: This function does not return anything.
         """
-        site =  await self.find_many(where={"uid": uid})
+        site =  await self.fetch_one(where={"uid": uid})
         if site:
-            rel = await self.update_relation_single(site=site[0])
+            rel = await self.update_relation_single(site=site)
+            await self.populate_single_address(site=site)
             if rel:
                 await self.rel_service.calculate_emission_ratios(rel)
 
@@ -591,18 +601,19 @@ class IOrgSiteService:
 
         :return: None
         """
-        # sites = await self.prisma.query_raw(
-        #     query = f"""
-        #     SELECT *
-        #     FROM "IOrgSite"
-        #     WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(ipcc_to_gir.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS  NULL;
-        #     """, model=prisma.models.IOrgSite
-        # )
-        # for site in tqdm(sites, total=len(sites), desc="Updating relations"):
-        #     # await self.update_relation_single(site=site)
-        #     await self.populate_single_address(site=site)
-        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}})
-        await self.rel_service.calculate_emission_ratios(rels)
+        sites = await self.prisma.query_raw(
+            query = f"""
+            SELECT *
+            FROM "IOrgSite"
+            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(ipcc_to_gir.keys())}::text[], '|') || ')(\s*,|$)');
+            """, model=prisma.models.IOrgSite
+        )
+        for site in tqdm(sites, total=len(sites), desc="Updating relations"):
+            await self.populate_single_address(site=site)
+            await self.update_relation_single(site=site)
+        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}}, include={"site": True})
+        if rels:
+            await self.rel_service.calculate_emission_ratios(rels)
 
 
 

@@ -13,10 +13,11 @@ async def main():
     emission_service = IEmissionDataService()
     region_service   = RegionService()
     site_service = IOrgSiteService()
-    emissions = await emission_service.fetch_some(where={"longitude": None,"source":{"startswith": "calc:", "not": "gir4"} })
+    emissions = await emission_service.fetch_some(where={"region": None,"source":{"startswith": "calc:", "not": "gir4"} })
     for emission in tqdm(emissions, total=len(emissions)):
-            emission.site = await site_service.fetch_one(where={"uid": emission.siteUid})
-            await emission_service.update(data={"longitude": emission.site.longitude, "latitude": emission.site.latitude, 'regionName': emission.site.addressSubRegion}, where={"uid": emission.uid})
+            emission.site = await site_service.fetch_one(where={"uid": emission.siteUid}, include={"addressRegion": True})
+            address_region_uid = emission.site.addressRegion.uid if emission.site.addressRegion else None
+            await emission_service.update(data={"longitude": emission.site.longitude, "latitude": emission.site.latitude, 'regionName': emission.site.addressSubRegion, 'regionUid': address_region_uid}, where={"uid": emission.uid})
 
 if __name__ == "__main__":
     asyncio.run(main())

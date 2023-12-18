@@ -339,11 +339,12 @@ class ISiteCategoryRelService:
                         "periodLength": total_emission.periodLength,
                         "source": "calc:" + total_emission.source,
                         "categoryUid": relation.uid,
-                        "regionUid": relation.regionUid,
+                        "regionUid": relation.site.addressRegionUid,
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,
                         "regionName": relation.site.addressSubRegion.split(" ")[0] if relation.site.addressSubRegion else None,
-                        "addressRegionUid": relation.site.addressRegionUid,
+                        "longitude": relation.site.longitude,
+                        "latitude": relation.site.latitude,
                     },
                     where={
                         "categoryName": relation.categoryName,
@@ -352,7 +353,7 @@ class ISiteCategoryRelService:
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,
                         "source": "calc:" + total_emission.source,
-                        "regionUid": relation.regionUid,
+                        "regionUid": relation.site.addressRegionUid,
                         "categoryUid": relation.uid,
                     },
                 )
