@@ -440,9 +440,9 @@ class IOrgSiteService:
         )
         latitude, longitude = get_coords_from_detail(address_detail)
         if not address_detail.get("type") == "auto_parsed":
-            region, subregion = get_regions_as_tuple(address_dict.get(structured_address), site=site)
+            region, subregion = get_regions_as_tuple(address_dict.get(structured_address))
         else:
-            region, subregion = get_regions_as_tuple(structured_address, site=site)
+            region, subregion = get_regions_as_tuple(structured_address)
         site.addressRegionName = region or None
         site.addressSubRegion = subregion or None
         if region and subregion:

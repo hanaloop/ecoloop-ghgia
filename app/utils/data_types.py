@@ -1,4 +1,4 @@
-def to_dict(obj: dict):
+def to_dict(obj: object):
     """
     Converts an objects attributes to a dictionary.
     

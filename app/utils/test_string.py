@@ -52,30 +52,28 @@ def test_neither_coord_exists():
     expected_result = (None, None)
     assert get_coords_from_detail(detail) == expected_result
 
-import pytest
 
-def test_get_regions_as_tuple_empty_address_detail():
-    address_detail = {}
-    expected_result = (None, None, None)
-    assert get_regions_as_tuple(address_detail) == expected_result
+def test_get_regions_as_tuple_empty_address():
+    structured_address = ""
+    expected_result = (None, None)
+    assert get_regions_as_tuple(structured_address) == expected_result
 
-def test_get_regions_as_tuple_missing_region_fields():
-    address_detail = {
-        "address": {
-            "region_1depth_name": "Region 1",
-            "region_3depth_name": "Region 3"
-        }
-    }
-    expected_result = ("Region 1", None, "Region 3")
-    assert get_regions_as_tuple(address_detail) == expected_result
+def test_get_regions_as_tuple_one_region():
+    structured_address = "New York"
+    expected_result = ("New", None)
+    assert get_regions_as_tuple(structured_address) == expected_result
 
-def test_get_regions_as_tuple_all_region_fields_present():
-    address_detail = {
-        "address": {
-            "region_1depth_name": "Region 1",
-            "region_2depth_name": "Region 2",
-            "region_3depth_name": "Region 3"
-        }
-    }
-    expected_result = ("Region 1", "Region 2", "Region 3")
-    assert get_regions_as_tuple(address_detail) == expected_result
+def test_get_regions_as_tuple_two_regions():
+    structured_address = "New York|California"
+    expected_result = ("New", "California")
+    assert get_regions_as_tuple(structured_address) == expected_result
+
+def test_get_regions_as_tuple_missing_region2():
+    structured_address = "New York|"
+    expected_result = ("New", "")
+    assert get_regions_as_tuple(structured_address) == expected_result
+
+def test_get_regions_as_tuple_missing_region1():
+    structured_address = "|California"
+    expected_result = ("", "California")
+    assert get_regions_as_tuple(structured_address) == expected_result

@@ -8,8 +8,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    env:
-      PROJECT_PATH: ./
     steps:
     - name: Check out repository code
       uses: actions/checkout@v2
@@ -19,19 +17,27 @@ jobs:
       with:
         python-version: '3.11.5'
 
-    - name: Install Poetry
-      run: |
-          curl -sSL https://install.python-poetry.org | python -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Cache Poetry virtualenv
+    - name: cache poetry install
       uses: actions/cache@v2
       with:
-        path: |
-          ~/.cache/pypoetry/virtualenvs
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-poetry-
+        path: ~/.local
+        key: poetry-1.7.1
+
+    - uses: snok/install-poetry@v1
+      with:
+        version: 1.7.1
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: cache deps
+      id: cache-deps
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+    - run: poetry install --no-interaction --no-root
+      if: steps.cache-deps.outputs.cache-hit != 'true'
 
     - name: Install dependencies using Poetry
       run: |
@@ -41,8 +47,5 @@ jobs:
       run: |
         poetry run prisma generate --schema=packages/database/prisma/schema.prisma
 
-    - name: Set PYTHONPATH
-      run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
-
     - name: Run Pytest
-      run: poetry run python -m pytest
+      run: poetry run pytest

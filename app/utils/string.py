@@ -47,9 +47,9 @@ def get_coords_from_detail(detail: dict):
 def get_parent_region(x: str):
     return x.split(' ')[0]
 
-def get_regions_as_tuple(structured_address: str, site):
+def get_regions_as_tuple(structured_address: str):
     """
-    Retrieves the regions from the given address detail and returns them as a tuple.
+    Retrieves the regions from the given structured address and returns them as a tuple.
 
     Parameters:
     - address_detail (str): The address detail from which to retrieve the regions.
@@ -60,6 +60,8 @@ def get_regions_as_tuple(structured_address: str, site):
     if not structured_address:
         return None, None
     divisions = structured_address.split("|")
+    if len(divisions) == 1:
+        return divisions[0].split(" ")[0], None
     try:
         region1 = divisions[0].split(" ")[0]
     except:

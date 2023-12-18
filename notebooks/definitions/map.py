@@ -49,7 +49,7 @@ class MapChartGroup:
                         x=float(relation.longitude),
                         first_bar=float(relation.norm),
                         colour= colour,
-                    ).create_rect(x_offset=index * 0.01, y_offset=0.01)
+                    ).create_rect(x_offset=index * 0.01)
                     message = HTML()
                     message.value = bubble_message.format(**relation._asdict())
                     layer.popup = message
