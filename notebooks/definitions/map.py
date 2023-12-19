@@ -49,7 +49,7 @@ class MapChartGroup:
                         x=float(relation.longitude),
                         first_bar=float(relation.norm),
                         colour= colour,
-                    ).create_rect(x_offset=index * 0.01)
+                    ).create_rect(x_offset=index * 0.03)
                     message = HTML()
                     message.value = bubble_message.format(**relation._asdict())
                     layer.popup = message
@@ -81,7 +81,7 @@ class MapChart:
         self.first_bar = first_bar
         self.colour = colour
 
-    def create_rect(self, width: float=0.01, x_offset: float=0, y_offset: float=0) -> Rectangle:
+    def create_rect(self, width: float=0.03, x_offset: float=0.03, y_offset: float=0) -> Rectangle:
         """
         Create a rectangle object.
 
@@ -97,12 +97,13 @@ class MapChart:
         return Rectangle(
             bounds=(
                 (self.y + y_offset, self.x + x_offset),
-                (self.y + (self.first_bar), self.x + width + x_offset),
+                (self.y + (self.first_bar) + y_offset, self.x + width + x_offset),
             ),
             weight=1,
             fill=True,
             fill_color=self.colour,
             fill_opacity=1,
+            color=self.colour,
         )
 
 class MapDefs:
