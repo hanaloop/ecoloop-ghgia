@@ -246,7 +246,7 @@ class IOrgSiteService:
 
     @catch_errors_decorator
     async def fetch_paged(
-        self, take=10, skip=0, order=None
+        self, take=10, skip=0, order=None, where=None
     ) -> list[prisma.models.IOrgSite]:
         """
         Fetches a paged list of org sites.
@@ -260,7 +260,7 @@ class IOrgSiteService:
             list[prisma.models.IOrgSite]: The list of org sites.
         """
         results = await self.prisma.iorgsite.find_many(
-            take=take, skip=skip, order=order
+            take=take, skip=skip, order=order, where=where
         )
         return results
 
@@ -282,6 +282,7 @@ class IOrgSiteService:
             int: The count of the iorgsite table.
         """
         return await self.prisma.iorgsite.count()
+
 
     # Business logic
     @catch_errors_decorator

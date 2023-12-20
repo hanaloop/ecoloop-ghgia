@@ -196,7 +196,7 @@ class IEmissionDataService():
         return results, next_cursor
 
     async def fetch_paged(
-        self, take=10, skip=0, order=None
+        self, take=10, skip=0, order=None, where: prisma.types.IEmissionDataWhereInput = None
     ) -> list[prisma.models.IEmissionData]:
         """
         Fetches a paged list of organizations.
@@ -210,7 +210,7 @@ class IEmissionDataService():
             list[prisma.models.IEmissionData]: The list of organizations.
         """
         results = await self.prisma.iemissiondata.find_many(
-            take=take, skip=skip, order=order
+            take=take, skip=skip, order=order, where=where
         )
         return results
 
