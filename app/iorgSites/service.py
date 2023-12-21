@@ -616,6 +616,12 @@ class IOrgSiteService:
         if rels:
             await self.rel_service.calculate_emission_ratios(rels)
 
-
-
-    
+    async def add_site(self, site: prisma.partials.PostIorgSiteObject) -> None:
+        try:
+            site["keyHash"] = self.hash_row(site)
+            site = await self.prisma.iorgsite.create(data=site)
+            if site.structuredAddress is None:
+                site = await self.populate_single_address(site=site)
+            await self.update_relation_single(site=site)
+        except Exception as e:
+            return e
