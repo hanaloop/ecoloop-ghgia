@@ -27,6 +27,10 @@ class FileUtils:
 
 
     async def read_excel_to_pd(self, file: Buffer | str, sheet = None) -> pd.DataFrame: ##TODO: Surely this can be simplified
+        if sheet is None:
+            df = pd.read_excel(file).fillna("")
+            df.replace("",None,inplace=True)
+            return df
         df = pd.read_excel(file, sheet_name=sheet).fillna("")
         df.replace("",None,inplace=True)
         return df
