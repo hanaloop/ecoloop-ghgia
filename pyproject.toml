@@ -5,6 +5,7 @@ description = ""
 authors = ["YSAP"]
 packages = [
     { include = "app" },
+    { include = "scripts"}
 ]
 
 [tool.poetry.dependencies]
@@ -48,7 +49,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 pythonpath = [
-    ".", "app"
+    ".", "app", "scripts"
 ]
 testpaths = "app"
 norecursedirs = [

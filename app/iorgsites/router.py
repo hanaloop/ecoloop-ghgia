@@ -1,8 +1,9 @@
 import logging
-from typing import Annotated
-from fastapi import APIRouter, UploadFile, Depends
+from typing import Annotated, Any
+from fastapi import APIRouter, Body, Form, UploadFile, Depends, Request
+from prisma.partials import PostIorgSiteObject
 from app.iorgsites.service import IOrgSiteService
-from app.foundation.adapter_prisma import PageableResponse, PrismaAdapter, QueryArgs
+from app.foundation.adapter_prisma import PageableResponse, PrismaAdapter, QueryArgs, TestObj
 
 service = IOrgSiteService()
 adapter = PrismaAdapter()
@@ -10,7 +11,7 @@ router = APIRouter(
     prefix="/api/iorgsites",
     tags=["iorgsites"],
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api.iorgsites")
 
 @router.get("/count")
 async def count():
@@ -28,9 +29,13 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 async def get_by_id(uid):
     return await service.fetch_one(where={"uid": uid})
 
-@router.delete("/") ##TODO: Need auth
+@router.delete("/") ##TODO: Need auth TODO:Unify functions
 async def delete(where = None):
     return await service.delete(where=where)
+
+@router.delete("/{uid}")
+async def search():
+    return await service.delete(where={"uid": uid})
 
 @router.put("/")
 async def update(where = None, data = None):
@@ -58,24 +63,23 @@ async def search(query: QueryArgs = Depends()):
     logger.debug("query: %s", query)
     query_args = adapter.to_query_args(query=query.query)
     logger.debug("query_args: %s", query_args)
-    return await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
+    return await service.fetch_paged(where=query_args, take=query.pageSize, skip=query.pageSize*query.currentPage)
 
 @router.get("/search.paged/")
 async def search(query: QueryArgs = Depends()):
     logger.debug("query: %s", query)
     query_args = adapter.to_query_args(query=query.query)
     logger.debug("query_args: %s", query_args)
-    content =  await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page) ##TODO: Group these to a single query
+    content =  await service.fetch_paged(where=query_args, take=query.pageSize, skip=query.pageSize*query.currentPage, order=query.sort) ##TODO: Group these to a single query
     count = await service.fetch_count()
     response = adapter.to_pageable_response(query=query, response=content, count=count)
     return response
 
 @router.post("/add/")
-async def search(query: QueryArgs = Depends(), request_data = None):
-    logger.debug("query: %s", query)
-    query_args = adapter.to_query_args(query=query.query)
-    logger.debug("query_args: %s", query_args)
-    return await service.create(where=query_args, data=request_data)
+async def search(body: Request):
+    body = await body.json()
+    logger.debug("body: %s", body)
+    return await service.add_site(site=body)
 
 @router.put("/edit/")
 async def search(query: QueryArgs = Depends(), request_data = None):
