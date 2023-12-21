@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Depends, UploadFile
+from app.foundation.adapter_prisma import PrismaAdapter, QueryArgs
 from app.iorganizations.service import IOrganizationService
 
 
@@ -7,6 +8,7 @@ router = APIRouter(
     prefix="/api/iorganizations",
     tags=["iorganizations"],
 )
+adapter = PrismaAdapter()
 
 @router.get("/")
 async def get():
@@ -44,3 +46,24 @@ async def create(data):
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_organizations(data_source=data_source, buffer=file.file)
+
+@router.get("/search/")
+async def search(query: QueryArgs = Depends()):
+    query_args = adapter.to_query_args(query=query.query)
+    return await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
+
+@router.get("/search.paged/")
+async def search(query: QueryArgs = Depends()):
+    query_args = adapter.to_query_args(query=query.query)
+    response = await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
+    return {"response": response, "count": await service.fetch_count(where=query_args), }
+
+@router.post("/add/")
+async def search(query: QueryArgs = Depends(), request_data = None):
+    query_args = adapter.to_query_args(query=query.query)
+    return await service.create(where=query_args, data=request_data)
+
+@router.put("/edit/")
+async def search(query: QueryArgs = Depends(), request_data = None):
+    query_args = adapter.to_query_args(query=query.query)
+    return await service.upsert(where=query_args, data=request_data)

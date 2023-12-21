@@ -1,16 +1,16 @@
-from fastapi import APIRouter, UploadFile
+import logging
+from typing import Annotated
+from fastapi import APIRouter, UploadFile, Depends
 from app.iorgsites.service import IOrgSiteService
-
+from app.foundation.adapter_prisma import PageableResponse, PrismaAdapter, QueryArgs
 
 service = IOrgSiteService()
+adapter = PrismaAdapter()
 router = APIRouter(
     prefix="/api/iorgsites",
     tags=["iorgsites"],
 )
-
-@router.get("/")
-async def get():
-    return await service.find_many()
+logger = logging.getLogger(__name__)
 
 @router.get("/count")
 async def count():
@@ -26,7 +26,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 
 @router.get("/{uid}")
 async def get_by_id(uid):
-    return await service.find_one(where={"uid": uid})
+    return await service.fetch_one(where={"uid": uid})
 
 @router.delete("/") ##TODO: Need auth
 async def delete(where = None):
@@ -52,3 +52,34 @@ async def update_addresses():
 @router.put("/{uid}/address")
 async def update_single_address(uid: str):
     return await service.populate_single_address(uid=uid)
+
+@router.get("/search/")
+async def search(query: QueryArgs = Depends()):
+    logger.debug("query: %s", query)
+    query_args = adapter.to_query_args(query=query.query)
+    logger.debug("query_args: %s", query_args)
+    return await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
+
+@router.get("/search.paged/")
+async def search(query: QueryArgs = Depends()):
+    logger.debug("query: %s", query)
+    query_args = adapter.to_query_args(query=query.query)
+    logger.debug("query_args: %s", query_args)
+    content =  await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page) ##TODO: Group these to a single query
+    count = await service.fetch_count()
+    response = adapter.to_pageable_response(query=query, response=content, count=count)
+    return response
+
+@router.post("/add/")
+async def search(query: QueryArgs = Depends(), request_data = None):
+    logger.debug("query: %s", query)
+    query_args = adapter.to_query_args(query=query.query)
+    logger.debug("query_args: %s", query_args)
+    return await service.create(where=query_args, data=request_data)
+
+@router.put("/edit/")
+async def search(query: QueryArgs = Depends(), request_data = None):
+    logger.debug("query: %s", query)
+    query_args = adapter.to_query_args(query=query.query)
+    logger.debug("query_args: %s", query_args)
+    return await service.upsert(where=query_args, data=request_data)

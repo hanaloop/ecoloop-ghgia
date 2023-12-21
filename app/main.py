@@ -1,4 +1,5 @@
 
+import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 import uvicorn
@@ -7,6 +8,11 @@ from app.iorgsites import router as iorgsites
 from app.region import router as region
 from app.emission_data import router as emission_data
 from app.database import  get_connection
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler())
+
+
 client = get_connection()
 
 
@@ -24,8 +30,13 @@ app.include_router(iorganizations.router)
 app.include_router(emission_data.router)
 app.include_router(region.router)
 
+
+@app.get("/api")
+async def root():
+    return {"message": "Hello World"}
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=9090,)
+    uvicorn.run(app, host="0.0.0.0", port=9091,)
 
 """
 run for development (auto-reload)
