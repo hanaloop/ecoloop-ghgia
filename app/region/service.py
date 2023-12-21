@@ -36,6 +36,18 @@ class RegionService:
         else:
             await self.prisma.region.create(data=data)
 
+    async def fetch_one(self, where: prisma.types.RegionWhereUniqueInput, include=None)-> prisma.models.Region:
+        """
+        Fetches one record from the 'Region' table based on the given where clause.
+
+        Args:
+            where (prisma.types.RegionWhereUniqueInput): The unique identifier of the record to fetch.
+
+        Returns:
+            A Region object representing the fetched record.
+        """
+        return await self.prisma.region.find_first(where=where, include=include)
+
     async def upsert(
         self,
         data: prisma.types.RegionCreateInput,

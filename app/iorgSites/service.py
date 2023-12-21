@@ -6,6 +6,7 @@ import hashlib
 import numpy as np
 from pydantic import Json
 from tqdm import tqdm
+from app.region.service import RegionService
 from app.utils.file import FileUtils
 import prisma
 from app.utils.file_type import return_list
@@ -16,18 +17,22 @@ from app.foundation.exception import catch_errors_decorator
 from app.requests.service import RequestService
 from app.config.env_config import KAKAO_API_BURL, KAKAO_API_KEY
 from prisma import Json
-from app.config.column_mapping import code_dict
+from app.config.column_mapping import ipcc_to_gir
 from app.isitecategoryrels.service import ISiteCategoryRelService
-from app.utils.string import get_second_level_category, get_category_list
+from app.utils.string import get_category_list
 from app.config.column_mapping import address_dict
 from app.iorgsites.adapters.address_adapter import fix_address_string
+from app.utils.string import get_coords_from_detail, get_parent_region, get_regions_as_tuple
+
 
 
 class IOrgSiteService:
     def __init__(self):
         self.prisma = get_connection()
+        self.region_service = RegionService()
         self.requests = RequestService()
         self.rel_service = ISiteCategoryRelService()
+
 
     @catch_errors_decorator
     async def delete_all(self):
@@ -95,11 +100,9 @@ class IOrgSiteService:
         """
         return await self.prisma.iorgsite.create(data=data)
 
-    @catch_errors_decorator
-    @return_list
     async def update(
-        self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput
-    ) -> prisma.models.IOrgSite:
+        self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput, include: prisma.types.IOrgSiteInclude | None = None
+    ) ->  prisma.models.IOrgSite | None:
         """
         Update the given organization site with the provided data.
 
@@ -110,7 +113,7 @@ class IOrgSiteService:
         Returns:
             None
         """
-        return await self.prisma.iorgsite.update(where=where, data=data)
+        return await self.prisma.iorgsite.update(where=where, data=data, include=include)
 
     @catch_errors_decorator
     async def delete(self, where: prisma.types.IOrgSiteWhereInput) -> None:
@@ -147,17 +150,31 @@ class IOrgSiteService:
             where=where, include=include, order=order
         )
 
-    async def find_one(self, where: prisma.types.IOrgSiteWhereInput, include=None) -> prisma.models.IOrgSite:
+    async def fetch_one(self, where: prisma.types.IOrgSiteWhereInput, include: prisma.types.IOrgSiteInclude | None = None) -> prisma.models.IOrgSite | None:
         """
-        Fetches a single record based on the given where clause.
+        Fetches one record from the 'OrgSite' table based on the given where clause.
+
+        Args:
+            where (prisma.types.IOrgSiteWhereInput): The unique identifier of the record to fetch.
+
+        Returns:
+            A IOrgSite object representing the fetched record.
+        """
+        return await self.prisma.iorgsite.find_first(where=where, include=include)
+
+    async def fetch_some(
+        self, where: prisma.types.IOrgSiteWhereInput, include: prisma.types.IOrgSiteInclude | None = None
+    ) -> list[prisma.models.IOrgSite]:
+        """
+        Fetches some data based on the given where clause.
 
         Args:
             where: An input object type that represents the conditions used to filter the data.
 
         Returns:
-            A single IOrgSite object that matches the given conditions.
+            A list of IOrgSite objects that match the given conditions.
         """
-        return await self.prisma.iorgsite.find_first(where=where, include=include)
+        return await self.prisma.iorgsite.find_many(where=where, include=include)
     
     @catch_errors_decorator
     async def fetch_all(self) -> list[prisma.models.IOrgSite]:
@@ -333,6 +350,8 @@ class IOrgSiteService:
         source = self.transform_data(source)
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
         upserted_data = []
+        ## Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
+        ## which means I have to destructure it later
         for index, row in tqdm(source.iterrows(), total=len(source)):
             upserted_row = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
             upserted_data.append(upserted_row)
@@ -419,13 +438,61 @@ class IOrgSiteService:
         structured_address, address_detail = await self.get_site_structured_address(
             site
         )
+        latitude, longitude = get_coords_from_detail(address_detail)
+        if not address_detail.get("type") == "auto_parsed":
+            region, subregion = get_regions_as_tuple(address_dict.get(structured_address))
+        else:
+            region, subregion = get_regions_as_tuple(structured_address)
+        site.addressRegionName = region or None
+        site.addressSubRegion = subregion or None
+        if region and subregion:
+            site = await self.connect_address(site)
+        if latitude is None or longitude is None:
+            latitude, longitude = site.latitude, site.longitude
         return await self.prisma.iorgsite.update(
             where={"uid": site.uid},
             data={
                 "structuredAddress": address_dict.get(structured_address) or structured_address,
                 "addressDetails": Json(address_detail),
+                "latitude": latitude,
+                "longitude": longitude,
+                "addressRegionName": region,
+                "addressSubRegion": subregion
             },
         )
+
+    async def connect_address(self, site: prisma.models.IOrgSite) -> None:
+        """
+        Connects an organization site with its address.
+
+        Args:
+            site (prisma.models.IOrgSite): The organization site to connect.
+
+        Returns:
+            None
+        """
+        # district = get_parent_region(site.addressRegionName) if site.addressRegionName else None
+
+        # if not district:
+        #     return
+
+        # FOR SOME REASON INTELLISENSE GAVE ERROR WITH THIS COMMENT region = get_parent_region(site.addressRegionName) if site.addressRegionName else None
+        addressRegion = await self.region_service.fetch_one(
+            where={
+                "name": site.addressSubRegion,
+                "parent": {
+                    "is": {"name": site.addressRegionName}
+                }
+            }
+        )
+
+        if addressRegion is None:
+            return site
+
+        return  await self.update(
+            data={"addressRegionUid": addressRegion.uid}, where={"uid": site.uid}, include={"addressRegion": True}
+        )
+
 
     async def update_relation_single(self, uid: str = None, site: prisma.models.IOrgSite = None) -> None:
         """
@@ -461,7 +528,7 @@ class IOrgSiteService:
             await self.rel_service.delete_many(where={"siteUid": uid}) #TODO: This is slower but we need to have this in order to account for chancing sectorids
             for sector in sectors:
                 sector = sector.strip()
-                sector_conv = code_dict.get(sector)
+                sector_conv = ipcc_to_gir.get(sector)
                 category_list = get_category_list(sector_conv, return_lvl_from=2, return_lvl_to=3) if sector_conv else []
                 for category in category_list:
                     lvl = len(category.split("."))
@@ -520,9 +587,10 @@ class IOrgSiteService:
         Returns:
             None: This function does not return anything.
         """
-        site =  await self.find_many(where={"uid": uid})
+        site =  await self.fetch_one(where={"uid": uid})
         if site:
-            rel = await self.update_relation_single(site=site[0])
+            rel = await self.update_relation_single(site=site)
+            await self.populate_single_address(site=site)
             if rel:
                 await self.rel_service.calculate_emission_ratios(rel)
 
@@ -537,14 +605,15 @@ class IOrgSiteService:
             query = f"""
             SELECT *
             FROM "IOrgSite"
-            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(code_dict.keys())}::text[], '|') || ')(\s*,|$)') AND "structuredAddress" IS  NULL;
+            WHERE "sectorIds" ~ ('(^|\s*,\s*)(' || array_to_string(ARRAY{list(ipcc_to_gir.keys())}::text[], '|') || ')(\s*,|$)');
             """, model=prisma.models.IOrgSite
         )
         for site in tqdm(sites, total=len(sites), desc="Updating relations"):
-            await self.update_relation_single(site=site)
             await self.populate_single_address(site=site)
-        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}})
-        await self.rel_service.calculate_emission_ratios(rels)
+            await self.update_relation_single(site=site)
+        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}}, include={"site": True})
+        if rels:
+            await self.rel_service.calculate_emission_ratios(rels)
 
 
 

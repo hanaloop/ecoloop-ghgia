@@ -2,7 +2,7 @@ from typing_extensions import Buffer
 import pandas as pd
 import prisma
 from tqdm import tqdm
-from app.config.column_mapping import code_dict
+from app.config.column_mapping import ipcc_to_gir
 from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
 from app.utils.file import FileUtils
@@ -78,7 +78,7 @@ class IEmissionDataService():
     async def update(
         self,
         data: prisma.models.IEmissionData,
-        where: prisma.types.IEmissionDataWhereUniqueInput,
+        where: prisma.types.IEmissionDataWhereUniqueInput = None,
     ) -> prisma.models.IEmissionData:
         """
         Update the given organization with the provided data.
@@ -105,7 +105,7 @@ class IEmissionDataService():
         await self.prisma.iemissiondata.delete(where=where)
 
     async def fetch_some(
-        self, where: prisma.types.IEmissionDataWhereInput
+        self, where: prisma.types.IEmissionDataWhereInput, include=None
     ) -> list[prisma.models.IEmissionData]:
         """
         Fetches some data based on the given where clause.
@@ -243,10 +243,10 @@ class IEmissionDataService():
         Returns:
             dataframe: dataframe with matched codes 
         """
-        find_where = {"categoryName": {"in": list(code_dict.values())}}
+        find_where = {"categoryName": {"in": list(ipcc_to_gir.values())}}
         res = await self.fetch_some(where=find_where)
         df = pd.DataFrame([vars(d) for d in res])
-        inverse_map = {v: k for k, v in code_dict.items()}
+        inverse_map = {v: k for k, v in ipcc_to_gir.items()}
         df["category"] = df["categoryName"].map(inverse_map)
         return df
 
