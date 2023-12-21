@@ -1,7 +1,7 @@
 __pycache__/
 app/.*
 .coverage
-
+.seed_data
 
 # Local Secrets
 **/_secrets
