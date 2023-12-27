@@ -62,6 +62,7 @@ async def search(request: Request):
     try:
         return await service.create_or_throw(data=body)
     except Exception as e:
+        logger.error(e)
         raise HTTPException(status_code=400, detail="Site already exists")
        
 
@@ -69,7 +70,7 @@ async def search(request: Request):
 @router.put("/{uid}")
 async def search(request: Request, uid: str):
     body = await request.json()
-    field_types = sort_fields_by_inner_annotation(prisma.models.IOrgSite.model_fields)
+    field_types = sort_fields_by_inner_annotation(prisma.models.IEmissionData.model_fields)
     body = match_dict_to_types(body, field_types)
     return await service.update(where={"uid": uid}, data=body)
 
