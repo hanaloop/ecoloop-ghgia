@@ -1,6 +1,6 @@
 import pytest
 
-from app.utils.data_types import key_of_value, to_dict
+from app.utils.data_types import diff, key_of_value, to_dict
 
 class TestObject:
     def __init__(self, x):
@@ -41,3 +41,12 @@ def test_key_of_value():
     d = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
     with pytest.raises(ValueError):
         key_of_value(d, [10, 11, 12])
+
+
+def test_diff():
+    assert diff([], []) == []
+    assert diff([], [1, 2, 3]) == [1, 2, 3]
+    assert diff([1, 2, 3], []) == [1, 2, 3]
+    assert diff([1, 2, 3], [2, 3, 4]) == [1, 4]
+    assert diff([1, 2, 3], [4, 5, 6]) == [1, 2, 3, 4, 5, 6]
+

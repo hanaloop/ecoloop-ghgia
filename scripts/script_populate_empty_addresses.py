@@ -1,6 +1,5 @@
 import asyncio
 
-import prisma
 from tqdm import tqdm
 from app.database import get_connection
 from app.iorgsites.service import IOrgSiteService
