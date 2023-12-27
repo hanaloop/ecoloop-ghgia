@@ -4,7 +4,6 @@ from app.emission_data.service import IEmissionDataService
 from tqdm import tqdm
 from app.iorgsites.service import IOrgSiteService
 from app.region.service import RegionService
-from app.utils.string import get_coords_from_detail
 
 ##TODO: Temporary, this needs to happen automatically when the emission is created, but prisma is not fetching the region in include for some reason
 async def main():

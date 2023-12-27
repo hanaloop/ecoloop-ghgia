@@ -31,12 +31,13 @@ app.include_router(emission_data.router)
 app.include_router(region.router)
 
 
+
 @app.get("/api")
 async def root():
     return {"message": "Hello World"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9091,)
+    uvicorn.run(app, host="0.0.0.0", port=9091)
 
 """
 run for development (auto-reload)

@@ -1,33 +1,7 @@
-from enum import Enum
-import json
 from typing import Optional
-from typing_extensions import Any
-from fastapi import Body, Query
-import prisma
-from pydantic import BaseModel, Field
-from prisma.models import IOrgSite
+from fastapi import Request
+from pydantic import BaseModel
 
-class QueryArgs:
-    def __init__(
-        self,
-        query=Query(
-            default={},
-            title="Query",
-            required=False,
-        ),
-        _pageSize: Optional[int] = Query(default=20, title="Take", required=False),
-        _pageNum: Optional[int] = Query(default=0, title="Page", required=False),
-        sort = Query(default=None, title="Sort", required=False),
-    ) -> None:
-        self.query = query
-        self.pageSize = _pageSize
-        self.currentPage = _pageNum
-        self.sort = sort
-
-class TestObj(BaseModel):
-    def __init__(self, id: int = Body(), name: str = Body()) -> None:
-        self.id = id
-        self.name = name
 
 class PageableResponse(BaseModel):
     number: Optional[int]
@@ -41,15 +15,13 @@ class PageableResponse(BaseModel):
 
 
 class PrismaAdapter:
-    def to_query_args(self, query: QueryArgs, schema: prisma.models = None):
-        print(query)
+    def to_query_args(self, query: dict):
         operands = {}
-        query = {query}
-        query = json.loads(query)
+
         if not query:
             return
         for key, prop in query.items():
-            if prop and prop.startswith("_"):
+            if key and key.startswith("_"):
                 continue
             if len(key.split(":")) > 1:
                 field, operator = key.split(":")
@@ -61,23 +33,22 @@ class PrismaAdapter:
             else:
                 operands[key] = prop
 
-        print(operands)
         return operands
 
     def to_pageable_response(
-        self, query: QueryArgs, response, count: int
+        self, query: Request, response, count: int
     ) -> PageableResponse:
-        if not response and isinstance(query.page, int) and query.take:
+        if not response and isinstance(query["_pageNum"], int) and query["_pageSize"]:
             return
         response = PageableResponse(
-            number=query.currentPage,
+            number=int(query['_pageNum']),
             numberOfElements=len(response),
-            size=query.pageSize,
-            first= query.currentPage == 0,
-            last=query.currentPage == count // query.pageSize,
-            totalPages=count // query.pageSize
-            if count % query.pageSize > 0
-            else count // query.pageSize,
+            size=int(query['_pageSize']),
+            first= int(query["_pageNum"]) == 0,
+            last=int(query["_pageNum"]) == count // int(query["_pageSize"]),
+            totalPages=count // int(query["_pageSize"]) + 1
+            if count % int(query["_pageSize"]) > 0
+            else count // int(query["_pageSize"]),
             totalElements=count,
             content=response,
         )

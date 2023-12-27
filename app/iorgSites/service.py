@@ -21,8 +21,8 @@ from app.config.column_mapping import ipcc_to_gir
 from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.string import get_category_list
 from app.config.column_mapping import address_dict
-from app.iorgsites.adapters.address_adapter import fix_address_string
-from app.utils.string import get_coords_from_detail, get_parent_region, get_regions_as_tuple
+from app.iorgsites.adapters.adapter_address import fix_address_string
+from app.utils.string import get_coords_from_detail, get_regions_as_tuple
 
 
 
@@ -86,9 +86,8 @@ class IOrgSiteService:
             data={"create": data, "update": data}, where=where
         )
 
-    @catch_errors_decorator
     @return_list
-    async def create(self, data: prisma.types.IOrgSiteCreateInput) -> None:
+    async def create(self, data: prisma.types.IOrgSiteCreateInput) -> prisma.models.IOrgSite | None:
         """
         Creates a new org site with the given data.
 
@@ -99,6 +98,22 @@ class IOrgSiteService:
             None
         """
         return await self.prisma.iorgsite.create(data=data)
+
+    async def create_or_throw(self, data: prisma.types.IOrgSiteCreateInput) -> prisma.models.IOrgSite | None:
+        """
+        Creates a new org site with the given data or throws an exception if it fails.
+
+        Parameters:
+            - data: An instance of prisma.types.IOrgSiteCreateInput representing the data for the new org site.
+
+        Returns:
+            A prisma.models.IOrgSite object representing the created org site.
+        """
+        try:
+            return await self.create(data=data)
+        except Exception as e:
+            raise e
+        
 
     async def update(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput, include: prisma.types.IOrgSiteInclude | None = None
@@ -246,7 +261,7 @@ class IOrgSiteService:
 
     @catch_errors_decorator
     async def fetch_paged(
-        self, take=10, skip=0, order=None, where=None
+        self, take=10, skip=0, order=None, where=None, include=None
     ) -> list[prisma.models.IOrgSite]:
         """
         Fetches a paged list of org sites.
@@ -260,7 +275,7 @@ class IOrgSiteService:
             list[prisma.models.IOrgSite]: The list of org sites.
         """
         results = await self.prisma.iorgsite.find_many(
-            take=take, skip=skip, order=order, where=where
+            take=take, skip=skip, order=order, where=where, include=include
         )
         return results
 
@@ -286,7 +301,7 @@ class IOrgSiteService:
 
     # Business logic
     @catch_errors_decorator
-    def hash_row(self, row: pd.Series) -> str:
+    def hash_row(self, row: pd.Series | dict) -> str:
         """
         Hashes the row to create a unique key
 
@@ -296,6 +311,8 @@ class IOrgSiteService:
         Returns:
             str: _description_
         """
+        if "businessRegistrationNum" not in row or "companyName" not in row or "landAddress" not in row:
+            raise ValueError("Row must contain businessRegistrationNum, companyName, landAddress")
         combined = (
             str(row["businessRegistrationNum"])
             + str(row["companyName"])
@@ -616,7 +633,7 @@ class IOrgSiteService:
         if rels:
             await self.rel_service.calculate_emission_ratios(rels)
 
-    async def add_site(self, site: prisma.partials.PostIorgSiteObject) -> None:
+    async def add_site(self, site: prisma.models.IOrgSite) -> None:
         try:
             site["keyHash"] = self.hash_row(site)
             site = await self.prisma.iorgsite.create(data=site)

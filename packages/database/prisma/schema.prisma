@@ -248,8 +248,9 @@ model IOrgSite {
   longitude                  Float?  
   latitude                   Float?  
 
-  siteCategoryRels           ISiteCategoryRel[]  //  
+  siteCategoryRel            ISiteCategoryRel[]  //  
   emissionData               IEmissionData[]
+
   @@index([uid])
   @@index([keyHash])
 }
@@ -286,6 +287,7 @@ model ISiteCategoryRel {
   contributionMagnitudeSector Float?
   contributionRatio           Float?
 
+  emissions                   IEmissionData[] 
 
   @@unique([siteUid, sectorId, categoryLevel])
   @@index([categoryName])
@@ -314,6 +316,9 @@ model IEmissionData {
   categoryName        String?  @db.VarChar
   categoryUid         String?  @db.VarChar
   // category            Code?    @relation(fields: [categoryUid], references: [uid], onDelete: SetNull)
+
+  categoryRelUid      String? @db.VarChar
+  categoryRel         ISiteCategoryRel? @relation(fields: [categoryRelUid], references: [uid], onDelete: SetNull)
 
   countryId           String?  @db.VarChar
   /// Name of the region, may be a region not defined in the sector table

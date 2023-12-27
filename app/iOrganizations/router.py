@@ -1,5 +1,9 @@
-from fastapi import APIRouter, Depends, UploadFile
-from app.foundation.adapter_prisma import PrismaAdapter, QueryArgs
+import logging
+from fastapi import APIRouter, HTTPException, Request, UploadFile
+import pandas as pd
+import prisma
+from app.foundation.adapter_prisma import PrismaAdapter
+from app.foundation.field_type_match import match_dict_to_types, sort_fields_by_inner_annotation
 from app.iorganizations.service import IOrganizationService
 
 
@@ -10,60 +14,76 @@ router = APIRouter(
 )
 adapter = PrismaAdapter()
 
-@router.get("/")
-async def get():
-    return await service.fetch_all()
+logger = logging.getLogger("api.organizations")
+
 
 @router.get("/count")
 async def count():
     return await service.fetch_count()
 
-@router.get("/paged")
-async def paged(skip: int = 0, limit: int = 10):
-    return await service.fetch_paged(skip=skip, take=limit)
+
 
 @router.get("/group")
-async def group(count=None, by = None, sum = None, order = None, having = None):
-    return await service.group_by(count = count, by = by, sum = sum, order = order, having = having)
+async def group(count=None, by=None, sum=None, order=None, having=None):
+    return await service.group_by(
+        count=count, by=by, sum=sum, order=order, having=having
+    )
 
-@router.get("/{uid}")
-async def get_by_id(uid: str):
-    return await service.fetch_some(where={"uid": uid})
 
-@router.delete("/")
-async def delete(where = None):
-    return await service.delete(where=where)
+@router.get("/")
+async def search(request: Request):
+    query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params)
+    return await service.fetch_paged(
+        where=query_args, take=query_args.take, skip=query_args.take * query_args.page
+    )
 
-@router.put("/")
-async def update(where = None, data = None):
-    return await service.update(where=where, data=data)
+
+@router.get("/paged/")
+async def search(request: Request):
+    query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params)
+    page_size = int(query_params["_pageSize"])
+    page_num = int(query_params["_pageNum"])
+    content = await service.fetch_paged(
+        where=query_args,
+        take=page_size,
+        skip=page_size * page_num,
+    )  ##TODO: Group these to a single query
+    count = len(content)
+    response = adapter.to_pageable_response(
+        query=query_params, response=content, count=count
+    )
+    return response
+
 
 @router.post("/")
-async def create(data):
-    return await service.create(data=data)
+async def search(request: Request):
+    body = await request.json()
+    field_types = sort_fields_by_inner_annotation(prisma.models.IOrgSite.model_fields)
+    body = match_dict_to_types(body, field_types)
+    try:
+        return await service.create_or_throw(data=body)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=400, detail="Bad request")
+       
+
+
+@router.put("/{uid}")
+async def search(request: Request, uid: str):
+    body = await request.json()
+    field_types = sort_fields_by_inner_annotation(prisma.models.IOrganization.model_fields)
+    body = match_dict_to_types(body, field_types)
+    return await service.update(where={"uid": uid}, data=body)
+
+@router.delete("/{uid}")
+async def delete(uid):
+    return await service.delete(where={"uid": uid})
+
 
 @router.post("/upload")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_organizations(data_source=data_source, buffer=file.file)
 
-@router.get("/search/")
-async def search(query: QueryArgs = Depends()):
-    query_args = adapter.to_query_args(query=query.query)
-    return await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
-
-@router.get("/search.paged/")
-async def search(query: QueryArgs = Depends()):
-    query_args = adapter.to_query_args(query=query.query)
-    response = await service.fetch_paged(where=query_args, take=query.take, skip=query.take*query.page)
-    return {"response": response, "count": await service.fetch_count(where=query_args), }
-
-@router.post("/add/")
-async def search(query: QueryArgs = Depends(), request_data = None):
-    query_args = adapter.to_query_args(query=query.query)
-    return await service.create(where=query_args, data=request_data)
-
-@router.put("/edit/")
-async def search(query: QueryArgs = Depends(), request_data = None):
-    query_args = adapter.to_query_args(query=query.query)
-    return await service.upsert(where=query_args, data=request_data)

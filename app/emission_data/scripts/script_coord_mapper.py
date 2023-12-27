@@ -1,11 +1,9 @@
 import asyncio
 
-import prisma
 from app.database import get_connection
 from app.iorgsites.service import IOrgSiteService
 from app.emission_data.service import IEmissionDataService
 from tqdm import tqdm
-from app.foundation.field_type_lister import match_dict_to_types, sort_fields_by_inner_annotation
 
 ##Temporary until we merge the relation services
 async def main():
