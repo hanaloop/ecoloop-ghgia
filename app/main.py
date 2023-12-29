@@ -8,7 +8,7 @@ from app.iorgsites import router as iorgsites
 from app.region import router as region
 from app.emission_data import router as emission_data
 from app.database import  get_connection
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 

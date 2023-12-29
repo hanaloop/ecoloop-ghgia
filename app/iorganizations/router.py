@@ -1,6 +1,5 @@
 import logging
 from fastapi import APIRouter, HTTPException, Request, UploadFile
-import pandas as pd
 import prisma
 from app.foundation.adapter_prisma import PrismaAdapter
 from app.foundation.field_type_match import match_dict_to_types, sort_fields_by_inner_annotation

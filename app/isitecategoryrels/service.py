@@ -6,7 +6,9 @@ from app.emission_data.models.partial_emission_data import create_partial_gir1
 from app.foundation.exception import catch_errors_decorator
 from app.emission_data.service import IEmissionDataService
 from app.config.column_mapping import ipcc_to_gir_code
+from app.utils.data_types import to_dict
 from app.utils.string import get_second_level_category
+import pandas as pd
 
 
 class ISiteCategoryRelService:
@@ -144,7 +146,9 @@ class ISiteCategoryRelService:
             where=where, include=include
         )
 
-    async def fetch_one(self, where: prisma.types.IOrgSiteWhereInput) -> prisma.models.ISiteCategoryRel | None:
+    async def fetch_one(
+        self, where: prisma.types.IOrgSiteWhereInput
+    ) -> prisma.models.ISiteCategoryRel | None:
         """
         Fetches a single record based on the given where clause.
 
@@ -250,24 +254,34 @@ class ISiteCategoryRelService:
         """
         return await self.prisma.isitecategoryrel.count()
 
-    async def calculate_emission_ratios(
-        self, relations: list[prisma.models.ISiteCategoryRel]
-    ) -> None:
+    async def calculate_emissions(self, year: int) -> None:
         """
         Calculate emission ratios and emissions for the given site category relations.
-        
+
         Args:
             relations (list[prisma.models.ISiteCategoryRel]): A list of site category relations.
-        
+
         Returns:
             None: This function does not return anything.
         """
-        totalContributionMagnitudeInSector = await self.group_by(
-            by=["categoryName"], sum={"contributionMagnitudeSector": True}
+        date_from = datetime.datetime(year, 1, 1)
+        date_to = datetime.datetime(year, 12, 31)
+        relations = await self.fetch_some(
+            where={"site": {"is": {"registrationDateInitial": {"lte": date_from}}}},
+            include={"site": True},
         )
-        for relation in tqdm(relations, total=len(relations), desc="calculate_emission_ratios"):
-            ## We could add a function to also delete all emissions related to this relation before
-            ## re-creating them
+
+        if not relations or len(relations) == 0:
+            raise Exception("No relations found")
+        relations_df = [to_dict(rel) for rel in relations]
+        relations_df = pd.DataFrame(relations_df)
+        totalContributionMagnitudeInSector = relations_df.groupby("categoryName")[
+            "contributionMagnitudeSector"
+        ].sum()
+
+        for relation in tqdm(
+            relations, total=len(relations), desc="calculate_emission_ratios"
+        ):
             if relation.categoryName is None:
                 continue
 
@@ -277,8 +291,9 @@ class ISiteCategoryRelService:
                 total_emission = await self.emission_data_service.fetch_one(
                     where={
                         "categoryName": category_name,
-                        "periodStartDt": datetime.datetime(2020, 1, 1),
-                        "periodEndDt": datetime.datetime(2020, 12, 31),
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
+                        "pollutantId": "CO2",
                         "NOT": {"source": {"startsWith": "calc:"}},
                     }
                 )
@@ -287,47 +302,35 @@ class ISiteCategoryRelService:
                     get_second_level_category(relation.categoryName)
                 )
                 total_emission = await self.emission_data_service.group_by(
-                    by=["categoryName", "pollutantId"], 
+                    by=["categoryName", "pollutantId"],
                     sum={"emissionTotal": True},
                     having={
                         "categoryName": category_name,
-
                     },
                     where={
-                        "periodStartDt": datetime.datetime(2020, 1, 1),
-                        "periodEndDt": datetime.datetime(2020, 12, 31),
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
                         "NOT": {"source": {"startsWith": "calc:"}},
-                    }
+                    },
                 )
                 category_name = relation.categoryName
                 total_emission = total_emission[0]
-                total_emission["emissionTotal"] = total_emission["_sum"]["emissionTotal"]/1000 ##TODO: Create unit conversion function
-                total_emission = create_partial_gir1(total_emission = total_emission, categoryName=category_name)
+                total_emission["emissionTotal"] = (
+                    total_emission["_sum"]["emissionTotal"] / 1000
+                )  ##TODO: Create unit conversion function
+                total_emission = create_partial_gir1(
+                    total_emission=total_emission, categoryName=category_name, date_from=date_from, date_to=date_to
+                )
 
-            if  total_emission is None or total_emission.emissionTotal is None:
+            if total_emission is None or total_emission.emissionTotal is None:
                 continue
             total_emission_gas = total_emission.emissionTotal
-            matching_item = next(
-                (
-                    item
-                    for item in totalContributionMagnitudeInSector
-                    if item["categoryName"] == relation.categoryName
-                ),
-                None,
-            )
-            if (
-                matching_item
-                and matching_item["_sum"]["contributionMagnitudeSector"]
-                and matching_item["_sum"]["contributionMagnitudeSector"] > 0
-            ):
+            matching_item = totalContributionMagnitudeInSector.loc[category_name]
+            if matching_item is not None:
                 relation.contributionRatio = (
-                    relation.contributionMagnitudeSector
-                    / matching_item["_sum"]["contributionMagnitudeSector"]
+                    relation.contributionMagnitudeSector / matching_item
                 )
-                await self.update(
-                    data={"contributionRatio": relation.contributionRatio},
-                    where={"uid": relation.uid},
-                )
+
                 emission = relation.contributionRatio * total_emission_gas
                 await self.emission_data_service.update_or_create(
                     data={
@@ -341,7 +344,7 @@ class ISiteCategoryRelService:
                         "regionUid": relation.site.addressRegionUid,
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,
-                        "regionName": relation.site.addressSubRegion.split(" ")[0] if relation.site.addressSubRegion else None,
+                        "regionName": relation.site.addressSubRegion,
                         "longitude": relation.site.longitude,
                         "latitude": relation.site.latitude,
                         "categoryRelUid": relation.uid,

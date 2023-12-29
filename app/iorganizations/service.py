@@ -1,3 +1,4 @@
+import os
 from typing_extensions import Buffer
 import pandas as pd
 import prisma
@@ -247,7 +248,7 @@ class IOrganizationService:
 
     @catch_errors_decorator
     async def upload_organizations(
-        self, data_source: str, buffer: Buffer = None, path: str = None
+        self, data_source: str = None, buffer: Buffer = None, path: str = None
     ) -> list[prisma.models.IOrganization]:
         """
         Get organizations from the given data source.
@@ -260,6 +261,13 @@ class IOrganizationService:
         Returns:
             list[prisma.models.IOrganization]: A list of organizations.
         """
+        if not data_source and buffer:
+            data_source = "web"
+        elif path and not buffer:
+            data_source = os.path.basename(path)
+        else:
+            data_source = None
+        
         files = FileUtils()
         source = await files.read_to_pd(data_source, buffer, path)
         source.rename(columns=iorganization_map, inplace=True)

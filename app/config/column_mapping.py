@@ -43,8 +43,25 @@ iorgsite_map = {
     "전력": "electricity",
     "석유": "oil",
     "가스": "gas",
-    "기타": "others"
+    "기타": "others",
+    "공장주소": "streetAddress",
+    "공장주소_지번": "landAddress",
+    "시도명": "addressRegionName",
+    "시군구명" : "addressSubRegion",
+    "보유구분": "propertyOwnership",
+    "남자종업원": "numEployeesMale",
+    "여자종업원": "numEployeesFemale",
+    "외국인남자종업원": "numEployeesForeignMale",
+    "외국인여자종업원": "numEployeesForeignFemale",
+    "종업원합계": "numEmployeesTotal",
+    "원자재": "mainRawMaterials",
+    "공장규모": "sizeCategory",
+    "대표업종": "sectorIdMain",
+    "업종명": "sectorNames",
+    "업종코드": "sectorIds",
+    "법인주소": "propertyResidence",
 }
+
 iorganization_map = {
     "status": "에러 및 정보 코드",
     "modify_date":"dateModified",

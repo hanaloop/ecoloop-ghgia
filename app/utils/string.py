@@ -41,6 +41,12 @@ def get_category_list(x: str, return_lvl_from: int, return_lvl_to: int | None = 
 def get_coords_from_detail(detail: dict):
     latitude = detail.get('latitude', None)
     longitude = detail.get('longitude', None)
+    if not latitude or not longitude:
+        latitude = detail.get('lat', None)
+        longitude = detail.get('lon', None)
+    if not latitude or not longitude:
+        latitude = detail.get('y', None)
+        longitude = detail.get('x', None)
     return latitude, longitude
 
 

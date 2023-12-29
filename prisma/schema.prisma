@@ -9,7 +9,6 @@ datasource db {
 generator client {
   provider  = "prisma-client-py"
   interface = "asyncio"
-  partial_type_generator = "partial_types.py"
 }
 
 model IOrganization {
@@ -96,7 +95,7 @@ model IOrganization {
   keywords            String?
 
   /// 사업자 등록번호 (registration number) 
-  registNumber        String  @db.VarChar // DART: businessRegistNum NOTE: It is required because is used from keyhash
+  registNumber        String?  @db.VarChar // DART: businessRegistNum NOTE: It is required because is used from keyhash
 
   /// 기타 고유 번호
   identifier          String?  @db.VarChar
@@ -179,7 +178,7 @@ model IOrgSite {
 
   complexName                String?  @db.VarChar // 단지명
   companyName                String  @db.VarChar  //  회사명 NOTE: It is required because is used from keyhash
-  factoryManagementNumber    String?   //  공장관리번호
+  factoryManagementNumber    String   //  공장관리번호
 
   addressRegionName          String?  @db.VarChar // (FKA: province) 시도
   addressRegionUid           String?   @db.VarChar
@@ -525,7 +524,7 @@ model Region {
 
   @@unique([type, id])
   @@unique([parentUid, id])
-  @@unique([parentUid, code])
+  @@unique([parentUid, name])
   @@index(countryId)
   @@index(type)
   @@index(id)

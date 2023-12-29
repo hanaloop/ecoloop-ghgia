@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pydantic.fields import FieldInfo
 import ast
-from app.utils.data_types import key_of_value
+from app.utils.data_types import key_of_value, parse_to_date
 from app.utils.data_types import diff 
 
 DEFAULT_ANNOTATIONS = {
@@ -16,7 +16,8 @@ DEFAULT_ANNOTATIONS = {
     "bool": False,
     "list": [],
     "dict": {},
-    None: None
+    None: None,
+    "datetime": datetime.datetime(1,1,1,1,1,1),
     
 }
 
@@ -81,7 +82,9 @@ def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str
                     data[column] = data[column].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
 
                 elif annotation == 'NoneType':
-                    default_type = key_of_value(sorted_annotations, column)[1]
+                    default_types = key_of_value(sorted_annotations, column)
+                    index_of_none_type = default_types.index("NoneType")
+                    default_type = default_types[1-index_of_none_type]
                     data[column] = data[column].fillna(np.nan).replace([np.nan], DEFAULT_ANNOTATIONS[default_type])
 
             except Exception as e:
@@ -90,14 +93,29 @@ def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str
     return data
 
 def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
+    """
+    Updates the values in the `data` dictionary according to the types specified in the `sorted_annotations` dictionary.
+
+    Args:
+        data (dict): The dictionary containing the data to be updated.
+        sorted_annotations (dict): The dictionary specifying the types of the values in `data`.
+
+    Returns:
+        dict: The updated `data` dictionary. NOTE:This one works much better than the above, use this one if possible.
+    """
     for annotation in sorted_annotations.keys():
         for key, value in list(data.items()):
             if key not in sorted_annotations[annotation]:
                 continue
             try:
+                if annotation == 'NoneType':
+                    default_type = key_of_value(sorted_annotations, key)[1]
+                    if value is None:
+                        data[key] = DEFAULT_ANNOTATIONS[default_type]
+                        continue
                 if annotation == 'datetime':
                     if value is not None:
-                        data[key] = datetime.datetime.fromisoformat(value)
+                        data[key] = parse_to_date(value)
                 elif annotation == 'int':
                     if value is not None:
                         data[key] = int(value)
@@ -127,12 +145,6 @@ def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
                         data[key] = {}
                 elif annotation[0].isupper():
                     if value is None:
-                        del data[key]
-                elif annotation == 'NoneType':
-                    default_type = key_of_value(sorted_annotations, key)[1]
-                    if value is None:
-                        data[key] = DEFAULT_ANNOTATIONS[default_type]
-                    else:
                         del data[key]
 
             except Exception as e:
