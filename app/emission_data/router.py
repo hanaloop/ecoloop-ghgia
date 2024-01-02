@@ -35,6 +35,10 @@ async def search(request: Request):
         where=query_args, take=query_args.take, skip=query_args.take * query_args.page
     )
 
+@router.get("/iemissiondata/{uid}")
+async def search(uid: str):
+    return await service.fetch_some(where={"uid": uid})
+
 
 @router.get("/iemissiondata.paged/")
 async def search(request: Request):
@@ -65,7 +69,6 @@ async def search(request: Request):
         logger.error(e)
         raise HTTPException(status_code=400, detail="Site already exists")
        
-
 
 @router.put("/iemissiondata/{uid}")
 async def search(request: Request, uid: str):

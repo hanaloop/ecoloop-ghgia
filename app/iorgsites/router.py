@@ -50,6 +50,9 @@ async def search(request: Request):
         where=query_args, take=query_args.take, skip=query_args.take * query_args.page
     )
 
+@router.get("/iorgsites/{uid}")
+async def search(uid: str):
+    return await service.fetch_some(where={"uid": uid})
 
 @router.get("/iorgsites.paged/")
 async def search(request: Request):

@@ -20,14 +20,15 @@ logger = logging.getLogger("api.organizations")
 async def count():
     return await service.fetch_count()
 
-
+@router.get("/iorganizations/{uid}")
+async def search(uid: str):
+    return await service.fetch_some(where={"uid": uid})
 
 @router.get("/iorganizations/group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
     )
-
 
 @router.get("/iorganizations/")
 async def search(request: Request):
@@ -36,7 +37,6 @@ async def search(request: Request):
     return await service.fetch_paged(
         where=query_args, take=query_args.take, skip=query_args.take * query_args.page
     )
-
 
 @router.get("/iorganizations.paged/")
 async def search(request: Request):
@@ -55,7 +55,6 @@ async def search(request: Request):
     )
     return response
 
-
 @router.post("/iorganizations/")
 async def search(request: Request):
     body = await request.json()
@@ -67,7 +66,6 @@ async def search(request: Request):
         logger.error(e)
         raise HTTPException(status_code=400, detail="Bad request")
        
-
 
 @router.put("/iorganizations/{uid}")
 async def search(request: Request, uid: str):
