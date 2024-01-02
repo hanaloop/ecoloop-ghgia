@@ -82,21 +82,6 @@ class IOrganizationService:
         """
         return await self.prisma.iorganization.create(data=data)
     
-    async def create_or_throw(self, data: prisma.types.IOrganizationCreateInput):
-        """
-        Creates a new organization with the given data or throws an error if the organization already exists.
-
-        Parameters:
-            - data: An instance of prisma.types.IOrganizationCreateInput representing the data for the new organization.
-
-        Returns:
-            None
-        """
-        try:
-            return await self.create(data=data)
-        except Exception as e:
-            raise e
-
     async def update(
         self,
         data: prisma.models.IOrganization,

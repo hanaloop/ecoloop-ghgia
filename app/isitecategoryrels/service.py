@@ -327,11 +327,11 @@ class ISiteCategoryRelService:
             total_emission_gas = total_emission.emissionTotal
             matching_item = totalContributionMagnitudeInSector.loc[category_name]
             if matching_item is not None:
-                relation.contributionRatio = (
+                contributionRatio = (
                     relation.contributionMagnitudeSector / matching_item
                 )
 
-                emission = relation.contributionRatio * total_emission_gas
+                emission = contributionRatio * total_emission_gas
                 await self.emission_data_service.update_or_create(
                     data={
                         "categoryName": category_name,

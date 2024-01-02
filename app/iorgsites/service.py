@@ -101,21 +101,6 @@ class IOrgSiteService:
         """
         return await self.prisma.iorgsite.create(data=data)
 
-    async def create_or_throw(self, data: prisma.types.IOrgSiteCreateInput) -> prisma.models.IOrgSite | None:
-        """
-        Creates a new org site with the given data or throws an exception if it fails.
-
-        Parameters:
-            - data: An instance of prisma.types.IOrgSiteCreateInput representing the data for the new org site.
-
-        Returns:
-            A prisma.models.IOrgSite object representing the created org site.
-        """
-        try:
-            return await self.create(data=data)
-        except Exception as e:
-            raise e
-        
 
     async def update(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput, include: prisma.types.IOrgSiteInclude | None = None

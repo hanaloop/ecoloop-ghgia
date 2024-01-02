@@ -21,7 +21,7 @@ DEFAULT_ANNOTATIONS = {
     
 }
 
-def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, List[str]]:
+def model_fields_into_type_map(data: Dict[str, FieldInfo]) -> Dict[str, List[str]]: ##TODO: Use hashmap to modify fields instead
     """
     Returns a sorted list of fields by their inner annotation type. Used to get fields that are datetime objects, json etc. 
     in a prisma model.
@@ -92,7 +92,7 @@ def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str
 
     return data
 
-def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
+def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
     """
     Updates the values in the `data` dictionary according to the types specified in the `sorted_annotations` dictionary.
 

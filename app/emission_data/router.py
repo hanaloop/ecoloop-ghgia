@@ -3,31 +3,31 @@ from fastapi import APIRouter, HTTPException, Request, UploadFile
 import prisma
 from app.emission_data.service import IEmissionDataService
 from app.foundation.adapter_prisma import  PrismaAdapter
-from app.foundation.field_type_match import match_dict_to_types, sort_fields_by_inner_annotation
+from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 
 
 service = IEmissionDataService()
 router = APIRouter(
-    prefix="/api/iemissiondata",
+    prefix="/api",
     tags=["iemissiondata"],
 )
 adapter = PrismaAdapter()
 logger = logging.getLogger("api.iorgsites")
 
 
-@router.get("/count")
+@router.get("/iemissiondata/iemissiondata/count")
 async def count():
     return await service.fetch_count()
 
 
 
-@router.get("/group")
+@router.get("/iemissiondata/group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
     )
 
-@router.get("/")
+@router.get("/iemissiondata/")
 async def search(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
@@ -36,7 +36,7 @@ async def search(request: Request):
     )
 
 
-@router.get("/paged/")
+@router.get("/iemissiondata.paged/")
 async def search(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
@@ -54,31 +54,31 @@ async def search(request: Request):
     return response
 
 
-@router.post("/")
+@router.post("/iemissiondata/")
 async def search(request: Request):
     body = await request.json()
-    field_types = sort_fields_by_inner_annotation(prisma.models.IEmissionData.model_fields)
-    body = match_dict_to_types(body, field_types)
+    field_types = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
+    body = cast_dict_to_types(body, field_types)
     try:
-        return await service.create_or_throw(data=body)
+        return await service.create(data=body)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=400, detail="Site already exists")
        
 
 
-@router.put("/{uid}")
+@router.put("/iemissiondata/{uid}")
 async def search(request: Request, uid: str):
     body = await request.json()
-    field_types = sort_fields_by_inner_annotation(prisma.models.IEmissionData.model_fields)
-    body = match_dict_to_types(body, field_types)
+    field_types = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
+    body = cast_dict_to_types(body, field_types)
     return await service.update(where={"uid": uid}, data=body)
 
-@router.delete("/{uid}")
+@router.delete("/iemissiondata/{uid}")
 async def delete(uid):
     return await service.delete(where={"uid": uid})
 
-@router.post("/upload")
+@router.post("/iemissiondata/upload")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_data(data_source=data_source, buffer=file.file)

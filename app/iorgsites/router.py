@@ -4,45 +4,45 @@ import pandas as pd
 import prisma
 from app.iorgsites.service import IOrgSiteService
 from app.foundation.adapter_prisma import PrismaAdapter
-from app.foundation.field_type_match import match_dict_to_types, sort_fields_by_inner_annotation
+from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 
 service = IOrgSiteService()
 adapter = PrismaAdapter()
 router = APIRouter(
-    prefix="/api/iorgsites",
+    prefix="/api",
     tags=["iorgsites"],
 )
 logger = logging.getLogger("api.iorgsites")
 
 
-@router.get("/count")
+@router.get("/iorgsites/count")
 async def count():
     return await service.fetch_count()
 
 
 
-@router.get("/group")
+@router.get("/iorgsites/group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
     )
 
-@router.post("/upload")
+@router.post("/iorgsites/upload")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_iorgsites(data_source=data_source, buffer=file.file)
 
 
-@router.put("/addresses/update")
+@router.put("/iorgsites/addresses/update")
 async def update_addresses():
     return await service.populate_addresses()
 
 
-@router.put("/{uid}/address")
+@router.put("/iorgsites/{uid}/address")
 async def update_single_address(uid: str):
     return await service.populate_single_address(uid=uid)
 
-@router.get("/")
+@router.get("/iorgsites/")
 async def search(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
@@ -51,7 +51,7 @@ async def search(request: Request):
     )
 
 
-@router.get("/paged/")
+@router.get("/iorgsites.paged/")
 async def search(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
@@ -69,28 +69,29 @@ async def search(request: Request):
     return response
 
 
-@router.post("/")
+@router.post("/iorgsites/")
 async def search(request: Request):
     body = await request.json()
-    field_types = sort_fields_by_inner_annotation(prisma.models.IOrgSite.model_fields)
-    body = match_dict_to_types(body, field_types)
+    field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+    body = cast_dict_to_types(body, field_types)
     body_as_pd = pd.DataFrame(body, index=[0])
     body_as_series = body_as_pd.iloc[0]
     body_as_series["keyHash"] = service.hash_row(row=body_as_series)
     try:
-        return await service.create_or_throw(data=body_as_series.to_dict())
+        return await service.create(data=body_as_series.to_dict())
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
+        
        
 
 
-@router.put("/{uid}")
+@router.put("/iorgsites/{uid}")
 async def search(request: Request, uid: str):
     body = await request.json()
-    field_types = sort_fields_by_inner_annotation(prisma.models.IOrgSite.model_fields)
-    body = match_dict_to_types(body, field_types)
+    field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+    body = cast_dict_to_types(body, field_types)
     return await service.update(where={"uid": uid}, data=body)
 
-@router.delete("/{uid}")
+@router.delete("/iorgsites/{uid}")
 async def delete(uid):
     return await service.delete(where={"uid": uid})
