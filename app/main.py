@@ -41,5 +41,5 @@ if __name__ == "__main__":
 
 """
 run for development (auto-reload)
-    uvicorn main:app --reload --port 9090
+    uvicorn main:app --reload --port 9091
 """

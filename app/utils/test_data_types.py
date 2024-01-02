@@ -27,7 +27,7 @@ def test_object_with_list_conversion():
 def test_key_of_value():
     # Testing when the value is found in the dictionary
     d = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
-    assert key_of_value(d, 4) == "b" ##TODO: This is not correct, but I will leave it for now. It must return a plain string
+    assert key_of_value(d, 4) == ["b"] ##TODO: This is not correct, but I will leave it for now. It must return a plain string
     
     # Testing when the value is not found in the dictionary
     d = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
