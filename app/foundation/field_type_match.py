@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import Union, Dict, List, get_args
 from collections import defaultdict
@@ -5,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pydantic.fields import FieldInfo
 import ast
-from app.utils.data_types import key_of_value
+from app.utils.data_types import key_of_value, parse_to_date
 from app.utils.data_types import diff 
 
 DEFAULT_ANNOTATIONS = {
@@ -15,11 +16,12 @@ DEFAULT_ANNOTATIONS = {
     "bool": False,
     "list": [],
     "dict": {},
-    None: None
+    None: None,
+    "datetime": datetime.datetime(1,1,1,1,1,1),
     
 }
 
-def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, List[str]]:
+def model_fields_into_type_map(data: Dict[str, FieldInfo]) -> Dict[str, List[str]]: ##TODO: Use hashmap to modify fields instead
     """
     Returns a sorted list of fields by their inner annotation type. Used to get fields that are datetime objects, json etc. 
     in a prisma model.
@@ -54,7 +56,7 @@ def sort_fields_by_inner_annotation(data: Dict[str, FieldInfo]) -> Dict[str, Lis
     return dict(sorted_fields)
 
 
-def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]]) -> pd.DataFrame:
+def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str]]) -> pd.DataFrame: ##TODO: Update like below
     data = data.replace({np.nan: None})
     for annotation, columns in sorted_annotations.items():
         for column in columns:
@@ -80,7 +82,9 @@ def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str
                     data[column] = data[column].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else {})
 
                 elif annotation == 'NoneType':
-                    default_type = key_of_value(sorted_annotations, column)[1]
+                    default_types = key_of_value(sorted_annotations, column)
+                    index_of_none_type = default_types.index("NoneType")
+                    default_type = default_types[1-index_of_none_type]
                     data[column] = data[column].fillna(np.nan).replace([np.nan], DEFAULT_ANNOTATIONS[default_type])
 
             except Exception as e:
@@ -88,18 +92,30 @@ def match_df_to_types(data: pd.DataFrame, sorted_annotations: Dict[str, List[str
 
     return data
 
-def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
+def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
+    """
+    Updates the values in the `data` dictionary according to the types specified in the `sorted_annotations` dictionary.
+
+    Args:
+        data (dict): The dictionary containing the data to be updated.
+        sorted_annotations (dict): The dictionary specifying the types of the values in `data`.
+
+    Returns:
+        dict: The updated `data` dictionary. NOTE:This one works much better than the above, use this one if possible.
+    """
     for annotation in sorted_annotations.keys():
-        for key, value in data.items():
+        for key, value in list(data.items()):
             if key not in sorted_annotations[annotation]:
                 continue
-
-        
             try:
+                if annotation == 'NoneType':
+                    default_type = key_of_value(sorted_annotations, key)[1]
+                    if value is None:
+                        data[key] = DEFAULT_ANNOTATIONS[default_type]
+                        continue
                 if annotation == 'datetime':
                     if value is not None:
-                        ##TODO: This is WIP
-                        pass
+                        data[key] = parse_to_date(value)
                 elif annotation == 'int':
                     if value is not None:
                         data[key] = int(value)
@@ -121,15 +137,15 @@ def match_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
                     if isinstance(value, str):
                         data[key] = ast.literal_eval(value)
                     else:
-                        data[key] = []
+                        del data[key]
                 elif annotation == 'Dict':
                     if isinstance(value, str):
                         data[key] = ast.literal_eval(value)
                     else:
                         data[key] = {}
-                ##TODO: This is WIP
-                # if "NoneType" not in sorted_annotations.get(key, []) and value is None:
-                #     data[key] = ''
+                elif annotation[0].isupper():
+                    if value is None:
+                        del data[key]
 
             except Exception as e:
                 print(f"Error converting data for key {key} to {annotation}: {e}")

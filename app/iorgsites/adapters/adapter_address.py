@@ -1,5 +1,4 @@
 import re
-import numpy as np
 import pandas as pd
 
 
@@ -17,10 +16,15 @@ def fix_address_string(address: str) -> str:
     address = address.strip()
     address = re.sub(r'\(.*$', "", address)
     address = re.sub(r'\d+필지', "", address)
-    address = re.sub(r'\d+번지', "", address)  # Remove parts containing 번지
+    # address = re.sub(r'\d+번지', "", address)  # Remove parts containing 번지
     address = re.sub(r'\d+필', "", address)    # Remove parts containing 필
-    address = re.sub(r"외\s*외|외\s*", "", address)
-    address = re.sub(r"[!@#$%^&*()_+={}\[\]:;<>,.?~\\-]", "", address)
+    # address = re.sub(r"외\s*외|외\s*", "", address)
+    # address = re.sub(r"[!@#$%^&*()_+={}\[\]:;<>,.?~\\-]", "", address)
+    address = re.sub(r"\([^)]*\)", "", address)
+    address = address.split(',')[0]
     address = address.strip(",")
     address = address.strip()
     return address
+
+
+

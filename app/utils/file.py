@@ -8,6 +8,7 @@ class FileUtils:
         """
         Reads a file into a pandas dataframe. Generic implementation, finds file type automatically.
         """
+        ##TODO: Chunking for large files
         print(file_type)
         if (not file and not path) or (file and path):
             raise Exception("Either file or path must be provided")
@@ -67,3 +68,4 @@ class FileUtils:
 
     def get_file_extension(self, data_source: str) -> str:
         return os.path.splitext(data_source)[1]
+

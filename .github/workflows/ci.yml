@@ -45,7 +45,7 @@ jobs:
 
     - name: Setup Prisma Client
       run: |
-        poetry run prisma generate --schema=packages/database/prisma/schema.prisma
+        poetry run prisma generate
 
     - name: Run Pytest
       run: poetry run pytest

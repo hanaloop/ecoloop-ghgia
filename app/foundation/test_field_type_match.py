@@ -2,7 +2,7 @@ import datetime
 from typing import Union
 import pandas as pd
 import numpy as np
-from app.foundation.field_type_match import match_df_to_types, sort_fields_by_inner_annotation
+from app.foundation.field_type_match import match_df_to_types, cast_dict_to_types, model_fields_into_type_map
 from pydantic.fields import FieldInfo
 
 def test_match_to_types():
@@ -72,19 +72,21 @@ def test_match_to_types():
     expected_result = pd.DataFrame({'col1': ['', 'value'], 'col2': ['', 'value']})
     assert match_df_to_types(data, sorted_annotations).equals(expected_result)
 
+    #TODO: Test empty relationship list to None (whose names start with a capital letter)
+    
 
 def test_sort_fields_by_inner_annotation():
     # Test case 1: Empty data
     data = {}
-    assert sort_fields_by_inner_annotation(data) == {}
+    assert model_fields_into_type_map(data) == {}
 
     # Test case 2: Single field with non-Union annotation
     data = {'field1': FieldInfo(annotation=str)}
-    assert sort_fields_by_inner_annotation(data) == {'str': ['field1']}
+    assert model_fields_into_type_map(data) == {'str': ['field1']}
 
     # Test case 3: Single field with Union annotation
     data = {'field1': FieldInfo(annotation=Union[str, int])}
-    assert sort_fields_by_inner_annotation(data) == {'str': ['field1'], 'int': ['field1']}
+    assert model_fields_into_type_map(data) == {'str': ['field1'], 'int': ['field1']}
 
     # Test case 4: Multiple fields with different annotations
     data = {
@@ -92,4 +94,49 @@ def test_sort_fields_by_inner_annotation():
         'field2': FieldInfo(annotation=int),
         'field3': FieldInfo(annotation=datetime.datetime)
     }
-    assert sort_fields_by_inner_annotation(data) == {'str': ['field1'], 'int': ['field2'], 'datetime': ['field3']}
+    assert model_fields_into_type_map(data) == {'str': ['field1'], 'int': ['field2'], 'datetime': ['field3']}
+
+
+
+def test_cast_dict_to_types():
+   # Test case 1: Testing conversion to int
+   data = {'num': '10'}
+   sorted_annotations = {'int': ['num']}
+   expected_output = {'num': 10}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 2: Testing conversion to float
+   data = {'pi': '3.14'}
+   sorted_annotations = {'float': ['pi']}
+   expected_output = {'pi': 3.14}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 3: Testing conversion to bool
+   data = {'is_true': 'True'}
+   sorted_annotations = {'bool': ['is_true']}
+   expected_output = {'is_true': True}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 4: Testing conversion to str
+   data = {'name': 10}
+   sorted_annotations = {'str': ['name']}
+   expected_output = {'name': '10'}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 5: Testing conversion to Json
+   data = {'data': {'key': 'value'}}
+   sorted_annotations = {'Json': ['data']}
+   expected_output = {'data': '{"key": "value"}'}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 6: Testing conversion to List
+   data = {'list': '[1, 2, 3]'}
+   sorted_annotations = {'List': ['list']}
+   expected_output = {'list': [1, 2, 3]}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output
+
+   # Test case 7: Testing conversion to Dict
+   data = {'dict': "{'key': 'value'}"}
+   sorted_annotations = {'Dict': ['dict']}
+   expected_output = {'dict': {'key': 'value'}}
+   assert cast_dict_to_types(data, sorted_annotations) == expected_output

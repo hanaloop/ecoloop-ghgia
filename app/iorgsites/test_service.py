@@ -21,14 +21,14 @@ async def setup_db():
 def test_hash_row():
     # Testing for different combinations of values in the row
     row1 = pd.Series({
-        "businessRegistrationNum": "12345",
+        "factoryManagementNumber": "12345",
         "companyName": "ABC Corp",
         "landAddress": "123 Main St"
     })
     expected1 = hashlib.sha256("12345ABC Corp123 Main St".encode()).hexdigest()
     assert service.hash_row(row1) == expected1
     row2 = pd.Series({
-        "businessRegistrationNum": "67890",
+        "factoryManagementNumber": "67890",
         "companyName": "XYZ Corp",
         "landAddress": "456 Elm St"
     })
@@ -37,7 +37,7 @@ def test_hash_row():
 
     # Testing for empty values in the row
     row3 = pd.Series({
-        "businessRegistrationNum": "",
+        "factoryManagementNumber": "",
         "companyName": "",
         "landAddress": ""
     })
@@ -46,7 +46,7 @@ def test_hash_row():
 
     # Testing for row with None values
     row4 = pd.Series({
-        "businessRegistrationNum": None,
+        "factoryManagementNumber": None,
         "companyName": None,
         "landAddress": None
     })

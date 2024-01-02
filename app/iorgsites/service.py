@@ -1,5 +1,7 @@
+from datetime import datetime
 import json
 import logging
+import os
 from typing import AsyncIterator
 from typing_extensions import Buffer
 import hashlib
@@ -21,9 +23,9 @@ from app.config.column_mapping import ipcc_to_gir
 from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.string import get_category_list
 from app.config.column_mapping import address_dict
-from app.iorgsites.adapters.address_adapter import fix_address_string
-from app.utils.string import get_coords_from_detail, get_parent_region, get_regions_as_tuple
-
+from app.iorgsites.adapters.adapter_address import fix_address_string
+from app.utils.string import get_coords_from_detail, get_regions_as_tuple
+from app.utils.data_types import parse_to_date
 
 
 class IOrgSiteService:
@@ -86,9 +88,8 @@ class IOrgSiteService:
             data={"create": data, "update": data}, where=where
         )
 
-    @catch_errors_decorator
     @return_list
-    async def create(self, data: prisma.types.IOrgSiteCreateInput) -> None:
+    async def create(self, data: prisma.types.IOrgSiteCreateInput) -> prisma.models.IOrgSite | None:
         """
         Creates a new org site with the given data.
 
@@ -99,6 +100,7 @@ class IOrgSiteService:
             None
         """
         return await self.prisma.iorgsite.create(data=data)
+
 
     async def update(
         self, data: prisma.models.IOrgSite, where: prisma.types.IOrgSiteWhereUniqueInput, include: prisma.types.IOrgSiteInclude | None = None
@@ -246,7 +248,7 @@ class IOrgSiteService:
 
     @catch_errors_decorator
     async def fetch_paged(
-        self, take=10, skip=0, order=None, where=None
+        self, take=10, skip=0, order=None, where=None, include=None
     ) -> list[prisma.models.IOrgSite]:
         """
         Fetches a paged list of org sites.
@@ -260,7 +262,7 @@ class IOrgSiteService:
             list[prisma.models.IOrgSite]: The list of org sites.
         """
         results = await self.prisma.iorgsite.find_many(
-            take=take, skip=skip, order=order, where=where
+            take=take, skip=skip, order=order, where=where, include=include
         )
         return results
 
@@ -286,7 +288,7 @@ class IOrgSiteService:
 
     # Business logic
     @catch_errors_decorator
-    def hash_row(self, row: pd.Series) -> str:
+    def hash_row(self, row: pd.Series | dict) -> str:
         """
         Hashes the row to create a unique key
 
@@ -296,15 +298,16 @@ class IOrgSiteService:
         Returns:
             str: _description_
         """
+        if "factoryManagementNumber" not in row or "companyName" not in row or "landAddress" not in row:
+            raise ValueError("Row must contain factoryManagementNumber, companyName, landAddress")
         combined = (
-            str(row["businessRegistrationNum"])
+            str(row["factoryManagementNumber"])
             + str(row["companyName"])
             + str(row["landAddress"])
         )
         # print (hashlib.sha256(combined.encode()).hexdigest())e
         return hashlib.sha256(combined.encode()).hexdigest()
 
-    @catch_errors_decorator
     def transform_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Transforms the given DataFrame by renaming columns based on the `iorgsite_map` dictionary. Then, it replaces "-" with `None` in specific columns and converts them to datetime objects. Finally, it converts the "sectorIdMain" and "factoryManagementNumber" columns to strings.
@@ -316,23 +319,28 @@ class IOrgSiteService:
         - pd.DataFrame: The transformed DataFrame.
         """
         newDf = df.rename(columns=iorgsite_map)
+        newDf = newDf[newDf.columns.intersection(iorgsite_map.values())] ##TODO: Check if they exist first
         for col in [
-            "approvalDate",
             "registrationDate",
             "registrationDateInitial",
             "approvalDateInitial",
         ]:
-            newDf[col] = newDf[col].replace("-", None, inplace=True)
-            newDf[col] = pd.to_datetime(newDf[col]).replace(
-                {np.nan: None}, inplace=True
-            )
+            newDf[col] = newDf[col].replace("-", None)
+            ## Something weird is going on with the column types here, while there is NaNs in the date columns, they cannot be replaced
+            ## with None. So that makes it difficult to convert them to datetime. At the same time, the actual numeric values, somehow turn into
+            ## floats. Must investigate why this is happening.
+            newDf[col] = newDf[col].where(pd.notnull(newDf[col]), None)
+            newDf[col] = newDf[col].apply(lambda x: parse_to_date(x, dt_boundary_from=datetime(1910, 1, 1), dt_boundary_to=datetime.now())) 
+            newDf[col].replace(
+                {np.nan: None}, inplace=True)
         newDf["sectorIdMain"] = newDf["sectorIdMain"].astype(str)
-        newDf["factoryManagementNumber"] = newDf["factoryManagementNumber"].astype(str)
+        newDf['factoryManagementNumber'] = newDf['factoryManagementNumber'].astype(str)
+        newDf['operationStartDt'] = newDf['registrationDateInitial'] ##For now it is the same, later we can change this when we have other data
         return newDf
 
     @catch_errors_decorator
     async def upload_iorgsites(
-        self, data_source: str, buffer: Buffer = None, path: str = None
+        self, buffer: Buffer = None, path: str = None
     ) -> None:
         """
         Uploads data from a given data source to the iorgsites table.
@@ -345,23 +353,25 @@ class IOrgSiteService:
         Returns:
             None
         """
+        if buffer and not path:
+            data_source = "web"
+        elif path and not buffer:
+            data_source = os.path.basename(path)
         files = FileUtils()
         source = await files.read_to_pd(data_source, file=buffer, path=path)
-        source["dataSource"] = data_source
         source = self.transform_data(source)
+        source["dataSource"] = data_source
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
         upserted_data = []
-        ## Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
-        ## which means I have to destructure it later
+        # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
+        # which means I have to destructure it later
         for index, row in tqdm(source.iterrows(), total=len(source)):
-            upserted_row = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
-            upserted_data.append(upserted_row)
-            # await self.populate_single_address(site=upserted_row) # Could also do this here but it will take long time with the rate limit
-            # await self.update_relation_single(site=upserted_row)
+            await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+        await self.update_relations_alt()
         return upserted_data
 
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
-        request_addr = site.streetAddress or site.landAddress
+        request_addr = (site.streetAddress).strip() or site.landAddress.strip()
         request_addr = fix_address_string(request_addr)
         response = await self.requests.request(
             KAKAO_API_BURL,
@@ -417,6 +427,7 @@ class IOrgSiteService:
         for site in tqdm(sites, total=len(sites)):
             await self.populate_single_address(site)
 
+    #TODO: Seems like there is empty strings in the xlsx file. Clear them when importing
     @catch_errors_decorator
     async def populate_single_address(
         self, uid: str= None, site: prisma.models.IOrgSite = None
@@ -449,14 +460,14 @@ class IOrgSiteService:
         if region and subregion:
             site = await self.connect_address(site)
         if latitude is None or longitude is None:
-            latitude, longitude = site.latitude, site.longitude
+            latitude, longitude = site.addressRegion.latitude if site.addressRegion else None, site.addressRegion.longitude if site.addressRegion else None
         return await self.prisma.iorgsite.update(
             where={"uid": site.uid},
             data={
                 "structuredAddress": address_dict.get(structured_address) or structured_address,
                 "addressDetails": Json(address_detail),
-                "latitude": latitude,
-                "longitude": longitude,
+                "latitude": float(latitude) if latitude is not None else None,
+                "longitude": float(longitude) if longitude is not None else None,
                 "addressRegionName": region,
                 "addressSubRegion": subregion
             },
@@ -573,7 +584,7 @@ class IOrgSiteService:
             for site in sites:
                 rels = await self.update_relation_single(site=site)
                 if rels:
-                    await self.rel_service.calculate_emission_ratios(rels)
+                    await self.rel_service.calculate_emissions(rels)
                 pbar.update(1)
         
         pbar.close()
@@ -593,7 +604,7 @@ class IOrgSiteService:
             rel = await self.update_relation_single(site=site)
             await self.populate_single_address(site=site)
             if rel:
-                await self.rel_service.calculate_emission_ratios(rel)
+                await self.rel_service.calculate_emissions(rel)
 
     async def update_relations_alt(self)-> None:
         """
@@ -612,10 +623,13 @@ class IOrgSiteService:
         for site in tqdm(sites, total=len(sites), desc="Updating relations"):
             await self.populate_single_address(site=site)
             await self.update_relation_single(site=site)
-        rels = await self.rel_service.fetch_some(where=  {   "NOT": {"categoryName": None}}, include={"site": True})
-        if rels:
-            await self.rel_service.calculate_emission_ratios(rels)
 
-
-
-    
+    async def add_site(self, site: prisma.models.IOrgSite) -> None:
+        try:
+            site["keyHash"] = self.hash_row(site)
+            site = await self.prisma.iorgsite.create(data=site)
+            if site.structuredAddress is None:
+                site = await self.populate_single_address(site=site)
+            await self.update_relation_single(site=site)
+        except Exception as e:
+            return e

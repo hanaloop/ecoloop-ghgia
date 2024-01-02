@@ -8,7 +8,7 @@ from app.iorgsites import router as iorgsites
 from app.region import router as region
 from app.emission_data import router as emission_data
 from app.database import  get_connection
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn")
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
@@ -31,14 +31,15 @@ app.include_router(emission_data.router)
 app.include_router(region.router)
 
 
+
 @app.get("/api")
 async def root():
     return {"message": "Hello World"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9091,)
+    uvicorn.run(app, host="0.0.0.0", port=9091)
 
 """
 run for development (auto-reload)
-    uvicorn main:app --reload --port 9090
+    uvicorn main:app --reload --port 9091
 """

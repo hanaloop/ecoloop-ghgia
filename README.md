@@ -22,7 +22,6 @@ You will need to have poetry in your computer in order to manage the dependencie
   curl -sSL https://install.python-poetry.org | python3 -
   source ~/.poetry/env
   ```
-
 * Install dependency packages
 
   ```bash
@@ -33,7 +32,7 @@ Now you should be able to run `poetry shell` which is basically virtualenv.
 
 The application requires Postgres database. It can be started using docker compose:
 
-* Start docker compose with runtime dependencies 
+* Start docker compose with runtime dependencies
 
   ```bash
   docker compose up
@@ -42,6 +41,7 @@ The application requires Postgres database. It can be started using docker compo
 ## Preparing Database
 
 The Postgres dbms needs to be up. A database can be created with
+
 ```
 CREATE DATABASE ecoloop_ghgia_local
   ENCODING utf8
@@ -68,7 +68,7 @@ GRANT ALL ON DATABASE "ecoloop_ghgia_shadow_local" to ecoloopghgia_local;
 GRANT ALL ON SCHEMA public TO ecoloopghgia_local;
 ```
 
-## Migrating Prisma 
+## Migrating Prisma
 
 **To create a new migration file** after extending or modifying `prsima/schema.prisma`
 
@@ -77,6 +77,7 @@ prisma migrate dev --create-only --name <migration_name>
 ```
 
 **To actually apply the migration file**
+
 ```sh
 prisma migrate deploy
 ```
@@ -98,7 +99,6 @@ prisma migrate deploy
 
 The api can be accessed at ``http://localhost:9090/docs``. You can upload iorgsites using the ``/api/iorgsites/upload`` endpoint. The data can also be read from a local file, by providing a path to the file. This can only be done by creating a script that directly imports and runs the service, since python packages cannot be directly executed.
 
-
 ## Seed the data
 
 Suggested order to seed the data:
@@ -112,3 +112,28 @@ Suggested order to seed the data:
   2.1. Import FactoryOn
 
 3. IOrganization
+
+
+## Seeding the data and calculating the emissions from the command line
+
+```
+The scripts should be run in the following order:
+
+scripts/script_import_region.py
+scripts/script_import_sites.py
+scripts/script_import_organizations.py
+scripts/script_import_emission_data.py
+scripts/script_import_emission_data.py
+scripts/script_calculate_emissions.py
+
+Each script can be run by typing:
+python <name_of_script.py> --<expected_arg1> <value> --<expected_arg2> <value2>
+
+Usage instructions and accepted params can be shown by running <name_of_script.py> --help
+
+An sample shell script on how to run the data can be found in the root folder.
+
+!!!Important!!!
+
+For the factory data the file (2020.05월말기준)_전국공장등록현황.xlsx was used. Other files have different structures and will not work. (except the 2023 file that includes business registration numbers)
+```

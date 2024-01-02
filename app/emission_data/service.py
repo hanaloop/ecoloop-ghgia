@@ -75,6 +75,7 @@ class IEmissionDataService():
         """
         return await self.prisma.iemissiondata.create(data=data)
 
+
     async def update(
         self,
         data: prisma.models.IEmissionData,

@@ -95,7 +95,7 @@ model IOrganization {
   keywords            String?
 
   /// 사업자 등록번호 (registration number) 
-  registNumber        String?  @db.VarChar // DART: businessRegistNum
+  registNumber        String?  @db.VarChar // DART: businessRegistNum NOTE: It is required because is used from keyhash
 
   /// 기타 고유 번호
   identifier          String?  @db.VarChar
@@ -177,8 +177,8 @@ model IOrgSite {
   notes                      String?
 
   complexName                String?  @db.VarChar // 단지명
-  companyName                String?  @db.VarChar  //  회사명
-  factoryManagementNumber    String?   //  공장관리번호
+  companyName                String  @db.VarChar  //  회사명 NOTE: It is required because is used from keyhash
+  factoryManagementNumber    String   //  공장관리번호
 
   addressRegionName          String?  @db.VarChar // (FKA: province) 시도
   addressRegionUid           String?   @db.VarChar
@@ -190,7 +190,7 @@ model IOrgSite {
   addressLocality            String?  @db.VarChar
   postalCode                 String?  @db.VarChar
   streetAddress              String?  @db.VarChar  // 공장대표주소(도로)
-  landAddress                String?  @db.VarChar  //  공장대표주소(지번)
+  landAddress                String  @db.VarChar  //  공장대표주소(지번) NOTE: It is required because is used from keyhash
 
   structuredAddress          String?  //  도/시군구
 
@@ -207,6 +207,8 @@ model IOrgSite {
   registrationType           String?  @db.VarChar  //  등록구분
   registrationDateInitial    DateTime? //  최초등록일
   registrationDate           DateTime? //  
+  operationStartDt           DateTime? //
+  operationEndDt             DateTime? //
   businessType               String?  @db.VarChar  //  사업유형: 제조업
   phoneNumber                String?  @db.VarChar  //  
   
@@ -247,8 +249,9 @@ model IOrgSite {
   longitude                  Float?  
   latitude                   Float?  
 
-  siteCategoryRels           ISiteCategoryRel[]  //  
+  siteCategoryRel            ISiteCategoryRel[]  //  
   emissionData               IEmissionData[]
+
   @@index([uid])
   @@index([keyHash])
 }
@@ -285,6 +288,7 @@ model ISiteCategoryRel {
   contributionMagnitudeSector Float?
   contributionRatio           Float?
 
+  emissions                   IEmissionData[] 
 
   @@unique([siteUid, sectorId, categoryLevel])
   @@index([categoryName])
@@ -313,6 +317,9 @@ model IEmissionData {
   categoryName        String?  @db.VarChar
   categoryUid         String?  @db.VarChar
   // category            Code?    @relation(fields: [categoryUid], references: [uid], onDelete: SetNull)
+
+  categoryRelUid      String? @db.VarChar
+  categoryRel         ISiteCategoryRel? @relation(fields: [categoryRelUid], references: [uid], onDelete: SetNull)
 
   countryId           String?  @db.VarChar
   /// Name of the region, may be a region not defined in the sector table
@@ -519,7 +526,7 @@ model Region {
 
   @@unique([type, id])
   @@unique([parentUid, id])
-  @@unique([parentUid, code])
+  @@unique([parentUid, name])
   @@index(countryId)
   @@index(type)
   @@index(id)

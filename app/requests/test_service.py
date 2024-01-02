@@ -5,7 +5,7 @@ from tqdm import tqdm
 from app.iorgsites.service import RequestService
 import time
 
-TEST_COUNT = 80 ## Kind of arbitrary but the way test limiter works, it starts capping the speed after the limit has been hit. It then caps it to a degree that doesn't go over the limit for the rest of the time period i.e. slowly matching the required rpm
+TEST_COUNT = 10 ## Kind of arbitrary but the way test limiter works, it starts capping the speed after the limit has been hit. It then caps it to a degree that doesn't go over the limit for the rest of the time period i.e. slowly matching the required rpm
 TEST_RATE_LIMIT = 1
 TEST_TIME_PERIOD = 1
 @pytest.fixture

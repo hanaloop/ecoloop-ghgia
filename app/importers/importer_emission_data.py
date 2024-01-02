@@ -1,14 +1,32 @@
 import prisma
 from tqdm import tqdm
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
+from app.emission_data.adapters.gir1_import_adapter import GirImportAdapter
 from app.utils.file import FileUtils
 from app.emission_data.service import IEmissionDataService
-from app.foundation.field_type_match import match_df_to_types, sort_fields_by_inner_annotation
+from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 
 service = IEmissionDataService()
-adapters = GirCategoryAdapter()
+adapter_gir4 = GirCategoryAdapter()
+adapter_gir1 = GirImportAdapter()
 class EmissionDataImporter:
-    async def import_data(self, filepath: str, adapter=None):
+    def __init__(self):
+        self.adapters = {
+            "gir4": adapter_gir4,
+            "gir1": adapter_gir1
+        }
+
+    async def get_adapter(self, data_source: str):
+        return self.adapters[data_source]
+
+
+    def get_adapter_from_file(self, filepath: str):
+        for data_source in self.adapters:
+            if data_source in filepath:
+                return self.adapters[data_source]
+        return None
+    
+    async def import_data(self, filepath: str):
         """
         Import data from a file and create new records in the service.
 
@@ -19,21 +37,21 @@ class EmissionDataImporter:
         Returns:
             None
         """
-        adapter = adapters
         files = FileUtils()
+        adapter = self.get_adapter_from_file(filepath)
         if not adapter: #TODO: Later select adapters accordingly
             file_type = files.get_file_extension(filepath)
             df_data = await files.read_to_pd(path=filepath, file_type=file_type)
         else :
-            df_data = await adapters.prepare(path=filepath, data_source=filepath)
-        data_format = sort_fields_by_inner_annotation(prisma.models.IEmissionData.model_fields)
-        formatted_df = match_df_to_types(data=df_data, sorted_annotations=data_format)
-        for row in tqdm(formatted_df.to_dict(orient="records"), total=len(formatted_df)):
+            df_data = await adapter.prepare(path=filepath, data_source=filepath)
+        data_format = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
+        for row in tqdm(df_data.to_dict(orient="records"), total=len(df_data)):
+            row = cast_dict_to_types(row, data_format)
             new_row = {key: value for key, value in row.items() if value is not None}
             try:
                 await service.update_or_create(data=new_row, where={"source": new_row["source"], "categoryName": new_row["categoryName"], "periodStartDt": new_row["periodStartDt"], "periodEndDt": new_row["periodEndDt"], "pollutantId": new_row["pollutantId"]})
             except Exception as e:
-                print(f'Error: row {new_row} failed. Perhaps it already exists.')   
+                print(f'Error: row {new_row} failed. Perhaps it already exists. {e}')   
             finally:
                 pass
         

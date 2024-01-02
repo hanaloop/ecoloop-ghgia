@@ -8,7 +8,9 @@ def test_create_partial_gir1():
         "total_emission": {
             "emissionTotal": None
         },
-        "categoryName": "Category 1"
+        "categoryName": "Category 1",
+        "date_from": datetime.datetime(2020, 1, 1),
+        "date_to": datetime.datetime(2020, 12, 31)
     }
     
     result = create_partial_gir1(**kwargs)
