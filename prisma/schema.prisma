@@ -207,6 +207,8 @@ model IOrgSite {
   registrationType           String?  @db.VarChar  //  등록구분
   registrationDateInitial    DateTime? //  최초등록일
   registrationDate           DateTime? //  
+  operationStartDt           DateTime? //
+  operationEndDt             DateTime? //
   businessType               String?  @db.VarChar  //  사업유형: 제조업
   phoneNumber                String?  @db.VarChar  //  
   

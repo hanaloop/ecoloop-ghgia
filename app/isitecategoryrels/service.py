@@ -267,7 +267,7 @@ class ISiteCategoryRelService:
         date_from = datetime.datetime(year, 1, 1)
         date_to = datetime.datetime(year, 12, 31)
         relations = await self.fetch_some(
-            where={"site": {"is": {"registrationDateInitial": {"lte": date_from}}}},
+            where={"site": {"is": {"operationStartDt": {"lte": date_from}}}},
             include={"site": True},
         )
 

@@ -350,6 +350,7 @@ class IOrgSiteService:
                 {np.nan: None}, inplace=True)
         newDf["sectorIdMain"] = newDf["sectorIdMain"].astype(str)
         newDf['factoryManagementNumber'] = newDf['factoryManagementNumber'].astype(str)
+        newDf['operationStartDt'] = newDf['registrationDateInitial'] ##For now it is the same, later we can change this when we have other data
         return newDf
 
     @catch_errors_decorator
