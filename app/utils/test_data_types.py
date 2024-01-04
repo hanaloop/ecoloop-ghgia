@@ -77,3 +77,9 @@ def test_parse_to_date():
     # Testing when value is not a valid
     with pytest.raises(ValueError):
         parse_to_date("2021-13-01", dt_boundary_from=datetime( 2020, 1, 1), dt_boundary_to=datetime( 2021, 1, 1))
+
+    # Testing empty string
+    assert parse_to_date("", dt_boundary_from=datetime( 2020, 1, 1), dt_boundary_to=datetime( 2021, 1, 1)) == None
+
+    # Testing string with whitespace
+    assert parse_to_date(" ", dt_boundary_from=datetime(2020, 1, 1), dt_boundary_to=datetime(2021, 1, 1)) == None

@@ -44,12 +44,16 @@ async def search(request: Request):
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
+    include = query_params['include'] if 'include' in query_params else None
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
+        include=include,
     )  ##TODO: Group these to a single query
-    count = len(content)
+    if content is None:
+        content = []
+    count = await service.fetch_count()
     response = adapter.to_pageable_response(
         query=query_params, response=content, count=count
     )

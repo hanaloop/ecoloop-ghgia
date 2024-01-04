@@ -68,26 +68,32 @@ def parse_to_date(
     dt_boundary_from: Optional[datetime] = None,
     dt_boundary_to: Optional[datetime] = None
 ) -> Optional[datetime]:
-    if isinstance(value, datetime):
+    try:
+        if isinstance(value, datetime):
+            if dt_boundary_from is not None and dt_boundary_to is not None:
+                if dt_boundary_from > dt_boundary_to:
+                    raise ValueError("dt_boundary_from must be less than or equal to dt_boundary_to.")
+                if dt_boundary_from <= value <= dt_boundary_to:
+                    return value
+                return None
+            return value
+        
+        if not isinstance(value, str) and (value is None or np.isnan(value)):
+            return None
+        
+        if isinstance(value, str) and value.strip() == "":
+            return None
+
         if dt_boundary_from is not None and dt_boundary_to is not None:
             if dt_boundary_from > dt_boundary_to:
                 raise ValueError("dt_boundary_from must be less than or equal to dt_boundary_to.")
-            if dt_boundary_from <= value <= dt_boundary_to:
-                return value
+            _date = dateutil.parser.parse(str(value))
+            if dt_boundary_from <= _date <= dt_boundary_to:
+                return _date
             return None
-        return value
-    
-    if not isinstance(value, str) and (value is None or np.isnan(value)):
-        return None
-    
-    if dt_boundary_from is not None and dt_boundary_to is not None:
-        if dt_boundary_from > dt_boundary_to:
-            raise ValueError("dt_boundary_from must be less than or equal to dt_boundary_to.")
+        
         _date = dateutil.parser.parse(str(value))
-        if dt_boundary_from <= _date <= dt_boundary_to:
-            return _date
+        return _date
+    except ValueError:
         return None
-    
-    _date = dateutil.parser.parse(str(value))
-    return _date
 

@@ -197,7 +197,7 @@ class IOrganizationService:
 
     @catch_errors_decorator
     async def fetch_paged(
-        self, take=10, skip=0, order=None, where=None
+        self, take=10, skip=0, order=None, where=None, include=None
     ) -> list[prisma.models.IOrganization]:
         """
         Fetches a paged list of organizations.
@@ -211,7 +211,7 @@ class IOrganizationService:
             list[prisma.models.IOrganization]: The list of organizations.
         """
         results = await self.prisma.iorganization.find_many(
-            take=take, skip=skip, order=order, where=where
+            take=take, skip=skip, order=order, where=where, include=include
         )
         return results
 
