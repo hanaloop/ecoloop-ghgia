@@ -4,7 +4,7 @@ import prisma
 from app.foundation.adapter_prisma import PrismaAdapter
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 from app.iorganizations.service import IOrganizationService
-
+from app.iorgsites.service import IOrgSiteService
 
 service = IOrganizationService()
 router = APIRouter(
@@ -44,14 +44,16 @@ async def search(request: Request):
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
+    include = query_params.get("_include", None)
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
+        include=include
     )  ##TODO: Group these to a single query
-    count = len(content)
+    total_items = await service.fetch_count()
     response = adapter.to_pageable_response(
-        query=query_params, response=content, count=count
+        query=query_params, response=content, count=total_items
     )
     return response
 
@@ -84,3 +86,6 @@ async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_organizations(data_source=data_source, buffer=file.file)
 
+@router.get("/iorganizations-find-links/{companyName}/")
+async def find_links(companyName: str):
+    return await service.find_related_sites(company_name=companyName)
