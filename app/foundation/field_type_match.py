@@ -109,8 +109,12 @@ def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
                 continue
             try:
                 if annotation == 'NoneType':
-                    default_type = key_of_value(sorted_annotations, key)[1]
-                    if value is None:
+                    default_types = key_of_value(sorted_annotations, key)
+                    if default_types[0] == 'NoneType':
+                        default_type = default_types[1]
+                    else:
+                        default_type = default_types[0]
+                    if value is None or pd.isna(value):
                         data[key] = DEFAULT_ANNOTATIONS[default_type]
                         continue
                 if annotation == 'datetime':
