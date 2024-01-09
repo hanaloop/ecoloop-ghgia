@@ -274,6 +274,17 @@ class IOrganizationService:
     async def find_related_sites(
         self, company_name: str
     ) -> list[prisma.models.IOrgSite] | list[None]:
+        """
+        Searches for related sites to the given company name.
+
+        Args:
+            company_name (str): The name of the company.
+
+        Returns:
+            list[prisma.models.IOrgSite]: A list of related sites.
+                    
+        Example: 포스코 would first be searched as %포스코%, if no results are returned then %포%스%코% is searched.
+        """
         sites = await self.prisma.query_raw(
            query= f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%';""",
         )
