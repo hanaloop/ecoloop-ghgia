@@ -294,7 +294,7 @@ class ISiteCategoryRelService:
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
                         "pollutantId": "CO2",
-                        "NOT": {"source": {"startsWith": "calc:"}},
+                        "source":"gir4",
                     }
                 )
             else:
@@ -310,7 +310,7 @@ class ISiteCategoryRelService:
                     where={
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
-                        "NOT": {"source": {"startsWith": "calc:"}},
+                        "source": "gir1",
                     },
                 )
                 category_name = relation.categoryName
@@ -338,7 +338,6 @@ class ISiteCategoryRelService:
                         "periodStartDt": total_emission.periodStartDt,
                         "periodEndDt": total_emission.periodEndDt,
                         "emissionTotal": emission,
-                        "pollutantId": total_emission.pollutantId,
                         "periodLength": total_emission.periodLength,
                         "source": "calc:" + total_emission.source,
                         "regionUid": relation.site.addressRegionUid,

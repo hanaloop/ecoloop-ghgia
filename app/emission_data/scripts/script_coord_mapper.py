@@ -11,7 +11,7 @@ async def main():
     await db.connect()
     site_service = IOrgSiteService()
     emission_data_service = IEmissionDataService()
-    emissions = await emission_data_service.fetch_some(where={"latitude": None, "longitude": None, "source": {"startswith": "calc:"}}, include={"site": True})
+    emissions = await emission_data_service.fetch_many(where={"latitude": None, "longitude": None, "source": {"startswith": "calc:"}}, include={"site": True})
     for emission in tqdm(emissions, total=len(emissions)):
         emission.site = await site_service.fetch_one(where={"uid": emission.siteUid}, include={"addressRegion": True})
         if emission.site.longitude and emission.site.latitude:
