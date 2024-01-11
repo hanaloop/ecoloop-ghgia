@@ -39,26 +39,26 @@ async def search(request: Request):
         if "_include" in query_params
         else None
     )
-    response = await service.fetch_some(where=query_args, include=include)
+    response = await service.fetch_many(where=query_args, include=include) ##TODO: Put default take num so that results are limited
     return response
 
 
 @router.get("/iemissiondata/{uid}")
-async def search(uid: str):
-    return await service.fetch_some(where={"uid": uid})
+async def get_by_id(uid: str):
+    return await service.fetch_many(where={"uid": uid})
 
 @router.get("/iemissiondata/compare/")
-async def compare(request: Request):
+async def fetch_grouped_by_region(request: Request):
     query_params = request.query_params._dict
     year_start = query_params["_year_from"] if "_year_from" in query_params else None
     year_end = query_params["_year_to"] if "_year_to" in query_params else None
     if year_start is None or year_end is None:
         raise HTTPException(status_code=400, detail="year_start and year_end are required")
-    response = await service.compare( year_start=year_start, year_end=year_end)
+    response = await service.fetch_grouped_by_region( year_start=year_start, year_end=year_end)
     return response
 
 @router.get("/iemissiondata.paged/")
-async def search(request: Request):
+async def get_paged(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
@@ -84,7 +84,7 @@ async def search(request: Request):
 
 
 @router.post("/iemissiondata/")
-async def search(request: Request):
+async def create(request: Request):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
     body = cast_dict_to_types(body, field_types)
@@ -96,7 +96,7 @@ async def search(request: Request):
 
 
 @router.put("/iemissiondata/{uid}")
-async def search(request: Request, uid: str):
+async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
     body = cast_dict_to_types(body, field_types)

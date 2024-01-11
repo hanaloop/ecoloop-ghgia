@@ -109,7 +109,7 @@ class IEmissionDataService:
         """
         await self.prisma.iemissiondata.delete(where=where)
 
-    async def fetch_some(
+    async def fetch_many(
         self, where: prisma.types.IEmissionDataWhereInput, include=None
     ) -> list[prisma.models.IEmissionData]:
         """
@@ -261,13 +261,13 @@ class IEmissionDataService:
             dataframe: dataframe with matched codes
         """
         find_where = {"categoryName": {"in": list(ipcc_to_gir.values())}}
-        res = await self.fetch_some(where=find_where)
+        res = await self.fetch_many(where=find_where)
         df = pd.DataFrame([vars(d) for d in res])
         inverse_map = {v: k for k, v in ipcc_to_gir.items()}
         df["category"] = df["categoryName"].map(inverse_map)
         return df
 
-    async def compare(
+    async def fetch_grouped_by_region( ##TODO: Refactor into smaller pieces
         self,
         year_start: str,
         year_end: str,
