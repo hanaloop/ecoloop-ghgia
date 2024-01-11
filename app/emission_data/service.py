@@ -1,3 +1,5 @@
+import datetime
+import logging
 from typing_extensions import Buffer
 import numpy as np
 import pandas as pd
@@ -7,14 +9,20 @@ from tqdm import tqdm
 from app.config.column_mapping import ipcc_to_gir, ipcc_to_gir_code
 from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
+from app.emission_data.models.partial_emission_data import create_partial_gir1
+from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.file import FileUtils
 from app.utils.object import list_of_objects_to_dict
-
+from app.config.column_mapping import ipcc_to_gir_code
+from app.utils.data_types import parse_to_date, to_dict
+from app.utils.string import get_second_level_category
 
 class IEmissionDataService:
     def __init__(self) -> None:
         self.prisma = get_connection()
-
+        self.relation_service = ISiteCategoryRelService()
+        self.logger = logging.getLogger("api.iemissiondata")
+        
     async def delete_all(self):
         """
         Deletes all records in the 'IEmissionData' table.
@@ -39,11 +47,11 @@ class IEmissionDataService:
         existing_record = await self.prisma.iemissiondata.find_first(where=where)
 
         if existing_record:
-            await self.prisma.iemissiondata.update(
+            return await self.prisma.iemissiondata.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.iemissiondata.create(data=data)
+            return await self.prisma.iemissiondata.create(data=data)
 
     async def upsert(
         self,
@@ -62,7 +70,7 @@ class IEmissionDataService:
         Returns:
             None
         """
-        await self.prisma.iemissiondata.upsert(
+        return await self.prisma.iemissiondata.upsert(
             data={"create": data, "update": data}, where=where
         )
 
@@ -266,6 +274,123 @@ class IEmissionDataService:
         inverse_map = {v: k for k, v in ipcc_to_gir.items()}
         df["category"] = df["categoryName"].map(inverse_map)
         return df
+
+    async def calculate_emissions(self) -> None:
+        date_boundaries = await self.get_date_boundaries()
+        date_from = date_boundaries.get("from")
+        date_to = date_boundaries.get("to")
+        date_from = parse_to_date(date_from)
+        date_to = parse_to_date(date_to)
+        for year in tqdm(range(date_from.year, date_to.year + 1)):
+            logging.getLogger("api.iemissiondata").debug(f"Calculating emissions for year {year}...")
+            await self.calc_emissions_dt_range(year=year)
+        
+
+    async def calc_emissions_dt_range(self, year: int) -> None:
+        """
+        Calculate emission ratios and emissions for the given site category relations.
+
+        Args:
+            relations (list[prisma.models.ISiteCategoryRel]): A list of site category relations.
+
+        Returns:
+            None: This function does not return anything.
+        """
+        date_from = datetime.datetime(year, 1, 1)
+        date_to = datetime.datetime(year, 12, 31)
+        relations = await self.relation_service.fetch_many(
+            where={"site": {"is": {"operationStartDt": {"lte": date_from}}}},
+            include={"site": True},
+        )
+
+        if not relations or len(relations) == 0:
+            raise Exception("No relations found")
+        relations_df = [to_dict(rel) for rel in relations]
+        relations_df = pd.DataFrame(relations_df)
+        total_contribution_magnitude_in_sector = relations_df.groupby("categoryName")[
+            "contributionMagnitudeSector"
+        ].sum()
+
+        for relation in tqdm(
+            relations, total=len(relations), desc="calculate_emission_ratios"
+        ):
+            if relation.categoryName is None:
+                continue
+
+            if relation.categoryLevel > 2:
+                # E.g. category_name_gir4 = 2.A
+                category_name = relation.categoryName
+                total_emission = await self.fetch_one(
+                    where={
+                        "categoryName": category_name,
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
+                        "pollutantId": "CO2",
+                        "NOT": {"source": {"startsWith": "calc:"}},
+                    }
+                )
+            else:
+                category_name = ipcc_to_gir_code.get(
+                    get_second_level_category(relation.categoryName)
+                )
+                total_emission = await self.group_by(
+                    by=["categoryName", "pollutantId"],
+                    sum={"emissionTotal": True},
+                    having={
+                        "categoryName": category_name,
+                    },
+                    where={
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
+                        "NOT": {"source": {"startsWith": "calc:"}},
+                    },
+                )
+                category_name = relation.categoryName
+                total_emission = total_emission[0]
+                total_emission["emissionTotal"] = (
+                    total_emission["_sum"]["emissionTotal"] / 1000
+                )  ##TODO: Create unit conversion function
+                total_emission = create_partial_gir1(
+                    total_emission=total_emission, categoryName=category_name, date_from=date_from, date_to=date_to
+                )
+
+            if total_emission is None or total_emission.emissionTotal is None:
+                continue
+            total_emission_gas = total_emission.emissionTotal
+            matching_item = total_contribution_magnitude_in_sector.loc[category_name]
+            if matching_item is not None:
+                contribution_ratio = (
+                    relation.contributionMagnitudeSector / matching_item
+                )
+
+                emission = contribution_ratio * total_emission_gas
+                return await self.update_or_create(
+                    data={
+                        "categoryName": category_name,
+                        "periodStartDt": total_emission.periodStartDt,
+                        "periodEndDt": total_emission.periodEndDt,
+                        "emissionTotal": emission,
+                        "pollutantId": total_emission.pollutantId,
+                        "periodLength": total_emission.periodLength,
+                        "source": "calc:" + total_emission.source,
+                        "regionUid": relation.site.addressRegionUid,
+                        "siteUid": relation.siteUid,
+                        "regionName": relation.site.addressSubRegion,
+                        "longitude": relation.site.longitude,
+                        "latitude": relation.site.latitude,
+                        "categoryRelUid": relation.uid,
+                    },
+                    where={
+                        "categoryName": relation.categoryName,
+                        "periodStartDt": total_emission.periodStartDt,
+                        "periodEndDt": total_emission.periodEndDt,
+                        "siteUid": relation.siteUid,
+                        "pollutantId": total_emission.pollutantId,
+                        "source": "calc:" + total_emission.source,
+                        "regionUid": relation.site.addressRegionUid,
+                        "categoryRelUid": relation.uid,
+                    },
+                )
 
     async def fetch_grouped_by_region( ##TODO: Refactor into smaller pieces
         self,

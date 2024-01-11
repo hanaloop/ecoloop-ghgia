@@ -4,6 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 import uvicorn
+from app.foundation.task_tracker import TaskTracker
 from app.iorganizations import router as iorganizations
 from app.iorgsites import router as iorgsites
 from app.region import router as region
@@ -15,13 +16,14 @@ logger.addHandler(logging.StreamHandler())
 
 
 client = get_connection()
-
+task_tracker = TaskTracker()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Connecting to database...")
     get_connection()
     await client.connect()
+    task_tracker.start_tracking()
     yield
     await client.disconnect()
 
@@ -38,7 +40,7 @@ async def root():
     return {"message": "Hello World"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=9091)
+    uvicorn.run(app, host="0.0.0.0", port=9091, log_level="info")
 
 """
 run for development (auto-reload)

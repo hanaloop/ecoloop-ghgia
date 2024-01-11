@@ -8,6 +8,7 @@ import hashlib
 import numpy as np
 from pydantic import Json
 from tqdm import tqdm
+from app.emission_data.service import IEmissionDataService
 from app.region.service import RegionService
 from app.utils.file import FileUtils
 import prisma
@@ -34,6 +35,7 @@ class IOrgSiteService:
         self.region_service = RegionService()
         self.requests = RequestService()
         self.rel_service = ISiteCategoryRelService()
+        self.emission_service = IEmissionDataService()
 
 
     @catch_errors_decorator
@@ -584,7 +586,7 @@ class IOrgSiteService:
             for site in sites:
                 rels = await self.update_relation_single(site=site)
                 if rels:
-                    await self.rel_service.calculate_emissions(rels)
+                    await self.emission_service.calc_emissions_dt_range(rels)
                 pbar.update(1)
         
         pbar.close()
@@ -604,7 +606,7 @@ class IOrgSiteService:
             rel = await self.update_relation_single(site=site)
             await self.populate_single_address(site=site)
             if rel:
-                await self.rel_service.calculate_emissions(rel)
+                await self.emission_service.calc_emissions_dt_range(rel)
 
     async def update_relations_alt(self)-> None:
         """

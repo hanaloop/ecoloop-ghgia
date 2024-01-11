@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, UploadFile
 import prisma
 from app.emission_data.service import IEmissionDataService
 from app.foundation.adapter_prisma import PrismaAdapter
@@ -7,7 +7,8 @@ from app.foundation.field_type_match import (
     cast_dict_to_types,
     model_fields_into_type_map,
 )
-
+from app.foundation.task_tracker import TaskTracker
+tracker = TaskTracker()
 
 service = IEmissionDataService()
 router = APIRouter(
@@ -18,12 +19,12 @@ adapter = PrismaAdapter()
 logger = logging.getLogger("api.iorgsites")
 
 
-@router.get("/iemissiondata/iemissiondata/count")
+@router.get("/iemissiondata-count")
 async def count():
     return await service.fetch_count()
 
 
-@router.get("/iemissiondata/group")
+@router.get("/iemissiondata-group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
@@ -108,7 +109,7 @@ async def delete(uid):
     return await service.delete(where={"uid": uid})
 
 
-@router.post("/iemissiondata/upload")
+@router.post("/iemissiondata-upload")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_data(data_source=data_source, buffer=file.file)
@@ -117,3 +118,12 @@ async def upload(file: UploadFile):
 @router.get("/iemissiondata-dateboundaries")
 async def date_boundaries(request: Request):
     return await service.get_date_boundaries()
+
+@router.get("/iemissiondata-calculateemissions")
+async def calculate_emissions():
+    task_id = await tracker.add_task(service.calculate_emissions )
+    if task_id is False:
+        raise HTTPException(status_code=400, detail="Task already in progress")
+    return {"task_id": task_id}
+
+
