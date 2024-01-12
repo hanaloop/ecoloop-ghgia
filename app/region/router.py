@@ -26,7 +26,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 
 @router.get("/region/{uid}")
 async def get_by_id(uid):
-    return await service.fetch_some(where={"uid": uid})
+    return await service.fetch_many(where={"uid": uid})
 
 @router.delete("/region/") ##TODO: Need auth
 async def delete(where = None):

@@ -10,7 +10,7 @@ class RegionService:
         """
         Deletes all records in the 'Region' table.
         """
-        await self.prisma.region.delete_many()
+        return await self.prisma.region.delete_many()
 
     async def update_or_create(
         self,
@@ -30,11 +30,11 @@ class RegionService:
         existing_record = await self.prisma.region.find_first(where=where)
 
         if existing_record:
-            await self.prisma.region.update(
+            return await self.prisma.region.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.region.create(data=data)
+            return await self.prisma.region.create(data=data)
 
     async def fetch_one(self, where: prisma.types.RegionWhereUniqueInput, include=None)-> prisma.models.Region:
         """
@@ -65,7 +65,7 @@ class RegionService:
         Returns:
             None
         """
-        await self.prisma.region.upsert(
+        return await self.prisma.region.upsert(
             data={"create": data, "update": data}, where=where
         )
 
@@ -108,9 +108,9 @@ class RegionService:
         Returns:
             None
         """
-        await self.prisma.region.delete(where=where)
+        return await self.prisma.region.delete(where=where)
 
-    async def fetch_some(
+    async def fetch_many(
         self, where: prisma.types.RegionWhereInput
     ) -> list[prisma.models.Region]:
         """
@@ -143,7 +143,7 @@ class RegionService:
         Returns:
             None: This function does not return anything.
         """
-        await self.prisma.region.create_many(data=data)
+        return await self.prisma.region.create_many(data=data)
 
     async def group_by(
         self, count=None, by=None, sum=None, order=None, having=None

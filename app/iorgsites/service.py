@@ -8,6 +8,7 @@ import hashlib
 import numpy as np
 from pydantic import Json
 from tqdm import tqdm
+from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 from app.region.service import RegionService
 from app.utils.file import FileUtils
 import prisma
@@ -164,7 +165,7 @@ class IOrgSiteService:
         """
         return await self.prisma.iorgsite.find_first(where=where, include=include)
 
-    async def fetch_some(
+    async def fetch_many(
         self, where: prisma.types.IOrgSiteWhereInput, include: prisma.types.IOrgSiteInclude | None = None
     ) -> list[prisma.models.IOrgSite]:
         """
@@ -341,7 +342,7 @@ class IOrgSiteService:
     @catch_errors_decorator
     async def upload_iorgsites(
         self, buffer: Buffer = None, path: str = None
-    ) -> None:
+    ) -> list[prisma.models.IOrgSite]:
         """
         Uploads data from a given data source to the iorgsites table.
 
@@ -351,8 +352,22 @@ class IOrgSiteService:
             - path (str, optional): The path to the file containing the data. Defaults to None.
 
         Returns:
-            None
+            The list of upserted data.
         """
+        # source = await self.prepare_data(buffer, path)
+        # returned_data = []
+        # field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+        # # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
+        # # which means I have to destructure it later
+        # for index, row in tqdm(source.iterrows(), total=len(source)):
+        #     row = cast_dict_to_types(row, field_types)
+        #     ret = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+        #     if ret:
+        #         returned_data.append(ret)
+        await self.update_relations_alt()
+        # return returned_data
+
+    async def prepare_data(self, buffer: Buffer = None, path: str = None):
         if buffer and not path:
             data_source = "web"
         elif path and not buffer:
@@ -362,16 +377,11 @@ class IOrgSiteService:
         source = self.transform_data(source)
         source["dataSource"] = data_source
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
-        upserted_data = []
-        # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
-        # which means I have to destructure it later
-        for index, row in tqdm(source.iterrows(), total=len(source)):
-            await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
-        await self.update_relations_alt()
-        return upserted_data
+        return source
 
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
-        request_addr = (site.streetAddress).strip() or site.landAddress.strip()
+        request_addr = site.streetAddress or site.landAddress
+        request_addr = request_addr.strip()
         request_addr = fix_address_string(request_addr)
         response = await self.requests.request(
             KAKAO_API_BURL,
@@ -381,7 +391,6 @@ class IOrgSiteService:
             },
         )
         api_loc_response = json.loads(response.text)
-        
         if api_loc_response.get("meta").get("total_count") == 0 and site.landAddress:
             request_addr = fix_address_string(site.landAddress)
             response = await self.requests.request(

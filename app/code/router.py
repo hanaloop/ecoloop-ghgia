@@ -39,7 +39,7 @@ async def search(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
     include = query_params.get("_include", None)
-    return await service.fetch_some(
+    return await service.fetch_many(
         where=query_args, include=include
     )
 
@@ -50,7 +50,7 @@ async def group(count=None, by = None, sum = None, order = None, having = None):
 
 @router.get("/code/{uid}")
 async def get_by_id(uid):
-    return await service.fetch_some(where={"uid": uid})
+    return await service.fetch_many(where={"uid": uid})
 
 @router.delete("/code/{uid}")
 async def delete(where = None):

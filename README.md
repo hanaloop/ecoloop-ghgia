@@ -119,12 +119,12 @@ Suggested order to seed the data:
 ```
 The scripts should be run in the following order:
 
-scripts/script_import_region.py
-scripts/script_import_sites.py
-scripts/script_import_organizations.py
-scripts/script_import_emission_data.py
-scripts/script_import_emission_data.py
-scripts/script_calculate_emissions.py
+scripts/script_import_region.py -> time taken = seconds
+scripts/script_import_sites.py -> time taken = 30 minutes
+scripts/script_import_organizations.py -> time taken = 10 minutes
+scripts/script_import_emission_data.py -> time taken = 1 minutes
+scripts/script_import_emission_data.py -> time taken = 10 minutes
+scripts/script_calculate_emissions.py -> time taken = 1 minute per year requested
 
 Each script can be run by typing:
 python <name_of_script.py> --<expected_arg1> <value> --<expected_arg2> <value2>

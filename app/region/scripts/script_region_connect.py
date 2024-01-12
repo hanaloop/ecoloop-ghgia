@@ -8,7 +8,7 @@ async def main():
     db = get_connection()
     await db.connect()
     site_service = IOrgSiteService()
-    sites = await site_service.fetch_some(where={"structuredAddress": {"not": None}})
+    sites = await site_service.fetch_many(where={"structuredAddress": {"not": None}})
     for site in tqdm(sites, total=len(sites)):
         await site_service.connect_address(site)
 

@@ -22,7 +22,7 @@ async def count():
 
 @router.get("/iorganizations/{uid}")
 async def search(uid: str):
-    return await service.fetch_some(where={"uid": uid})
+    return await service.fetch_many(where={"uid": uid})
 
 @router.get("/iorganizations/group")
 async def group(count=None, by=None, sum=None, order=None, having=None):

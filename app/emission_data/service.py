@@ -1,3 +1,4 @@
+import datetime
 from typing_extensions import Buffer
 import numpy as np
 import pandas as pd
@@ -9,11 +10,15 @@ from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
 from app.utils.file import FileUtils
 from app.utils.object import list_of_objects_to_dict
-
+from app.utils.data_types import to_dict
+from app.isitecategoryrels.service import ISiteCategoryRelService
+from app.utils.string import get_second_level_category
+from app.emission_data.models.partial_emission_data import create_partial_gir1
 
 class IEmissionDataService:
     def __init__(self) -> None:
         self.prisma = get_connection()
+        self.rel_service = ISiteCategoryRelService()
 
     async def delete_all(self):
         """
@@ -377,7 +382,7 @@ class IEmissionDataService:
             "gir1": gir_1_groupped.to_dict("records"),
         }
 
-    async def get_date_boundaries(self):
+    async def get_date_boundaries(self, source: str) -> dict:
         """
         Retrieves the maximum and minimum date boundaries of the emission data.
 
@@ -388,7 +393,115 @@ class IEmissionDataService:
             A dictionary containing the maximum and minimum date boundaries of the emission data.
         """
         boundaries = await self.prisma.query_raw(
-            query="""SELECT MIN("periodStartDt") AS from, MAX("periodEndDt") AS to from "IEmissionData" WHERE source like 'calc:%'"""
+            query=f"""SELECT MIN("periodStartDt") AS from, MAX("periodEndDt") AS to from "IEmissionData" WHERE source like '{source}'"""
         )
 
         return boundaries[0]
+    
+    async def calculate_emissions(self, year: int) -> None:
+        """
+        Calculate emissions for a given year.
+
+        Args:
+            year (int): The year for which to calculate emissions.
+
+        Returns:
+            None: This function does not return anything.
+        """
+
+        date_from = datetime.datetime(year, 1, 1)
+        date_to = datetime.datetime(year, 12, 31)
+        relations = await self.rel_service.fetch_many(
+            where={"site": {"is": {"operationStartDt": {"lte": date_from}}}},
+            include={"site": True},
+        )
+
+        if not relations or len(relations) == 0:
+            raise Exception("No relations found")
+        relations_df = [to_dict(rel) for rel in relations]
+        relations_df = pd.DataFrame(relations_df)
+        totalContributionMagnitudeInSector = relations_df.groupby("categoryName")[
+            "contributionMagnitudeSector"
+        ].sum()
+
+        for relation in tqdm(
+            relations, total=len(relations), desc="calculate_emission_ratios"
+        ):
+            if relation.categoryName is None:
+                continue
+
+            if relation.categoryLevel > 2:
+                # E.g. category_name_gir4 = 2.A
+                category_name = relation.categoryName
+                total_emission = await self.fetch_one(
+                    where={
+                        "categoryName": category_name,
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
+                        "pollutantId": "CO2",
+                        "source":"gir4",
+                    }
+                )
+            else:
+                category_name = ipcc_to_gir_code.get(
+                    get_second_level_category(relation.categoryName)
+                )
+                total_emission = await self.group_by(
+                    by=["categoryName", "pollutantId"],
+                    sum={"emissionTotal": True},
+                    having={
+                        "categoryName": category_name,
+                    },
+                    where={
+                        "periodStartDt": {"gte": date_from},
+                        "periodEndDt": {"lte": date_to},
+                        "source": "gir1",
+                    },
+                )
+                category_name = relation.categoryName
+                total_emission = total_emission[0]
+                total_emission["emissionTotal"] = (
+                    total_emission["_sum"]["emissionTotal"] / 1000
+                )  ##TODO: Create unit conversion function
+                total_emission = create_partial_gir1(
+                    total_emission=total_emission, categoryName=category_name, date_from=date_from, date_to=date_to
+                )
+
+            if total_emission is None or total_emission.emissionTotal is None:
+                continue
+            total_emission_gas = total_emission.emissionTotal
+            matching_item = totalContributionMagnitudeInSector.loc[category_name]
+            if matching_item is not None:
+                contributionRatio = (
+                    relation.contributionMagnitudeSector / matching_item
+                )
+
+                emission = contributionRatio * total_emission_gas
+                await self.update_or_create(
+                    data={
+                        "categoryName": category_name,
+                        "periodStartDt": total_emission.periodStartDt,
+                        "periodEndDt": total_emission.periodEndDt,
+                        "emissionTotal": emission,
+                        "periodLength": total_emission.periodLength,
+                        "source": "calc:" + total_emission.source,
+                        "regionUid": relation.site.addressRegionUid,
+                        "siteUid": relation.siteUid,
+                        "pollutantId": total_emission.pollutantId,
+                        "regionName": relation.site.addressSubRegion,
+                        "longitude": relation.site.longitude,
+                        "latitude": relation.site.latitude,
+                        "categoryRelUid": relation.uid,
+                    },
+                    where={
+                        "categoryName": relation.categoryName,
+                        "periodStartDt": total_emission.periodStartDt,
+                        "periodEndDt": total_emission.periodEndDt,
+                        "siteUid": relation.siteUid,
+                        "pollutantId": total_emission.pollutantId,
+                        "source": "calc:" + total_emission.source,
+                        "regionUid": relation.site.addressRegionUid,
+                        "categoryRelUid": relation.uid,
+                    },
+                )
+

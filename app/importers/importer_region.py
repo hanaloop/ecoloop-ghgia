@@ -24,4 +24,7 @@ class RegionImporter:
         dict_data = df_data.to_dict(orient="records")
         for row in dict_data:
             cast_dict_to_types(row, model_types)
-        await service.create_many(data=dict_data)                    
+        try:
+            return await service.create_many(data=dict_data)
+        except Exception as e:
+            print(f'Error: row {row} failed. Perhaps it already exists. {e}')

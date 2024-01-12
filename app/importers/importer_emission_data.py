@@ -48,8 +48,8 @@ class EmissionDataImporter:
             df_data = await adapter.prepare(path=filepath, data_source=filepath)
         data_format = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
         for row in tqdm(df_data.to_dict(orient="records"), total=len(df_data)):
-            row = cast_dict_to_types(row, data_format)
-            new_row = {key: value for key, value in row.items() if value is not None}
+            new_row = cast_dict_to_types(row, data_format)
+            # new_row = {key: value for key, value in row.items() if value is not None}
             if new_row['regionUid']:
                 region = await self.region_service.fetch_one(where={"uid": new_row["regionUid"]})
                 new_row['latitude'] = region.latitude

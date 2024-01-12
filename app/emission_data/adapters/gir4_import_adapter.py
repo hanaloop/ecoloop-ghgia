@@ -116,10 +116,10 @@ class GirCategoryAdapter:
     
     async def prepare(self, data_source: str, buffer: Buffer = None, path: str = None) -> pd.DataFrame:
         files = FileUtils()
-        sheets = files.get_excel_sheet_names(buffer or path, data_source)
+        sheets = files.get_excel_sheet_names(buffer or path or data_source, path or data_source)
         emission_data_df = pd.DataFrame()
         for sheet in list(set(sheets) & set(SHEETS_TO_READ)):
-            df = await files.read_to_pd("xlsx", buffer or path, sheet= sheet)
+            df = await files.read_to_pd("xlsx", buffer or path or data_source, sheet= sheet)
             df = await self.__process_data(df)
             df = await self.__prepare_for_db(df, sheet)
             emission_data_df = pd.concat([emission_data_df, df], ignore_index=True)
