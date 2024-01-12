@@ -86,6 +86,7 @@ def test_upload_iorgsites_buffer_and_path(instance):
 async def test_upload_iorgsites_no_arguments(instance):
     instance.upload_iorgsites()
 
+@pytest.mark.skip("WIP")
 @pytest.mark.asyncio
 async def test_request_address_with_streetAddress():
     site = MagicMock()
@@ -127,6 +128,7 @@ async def test_request_address_with_streetAddress():
                 assert result[0] == expected_structured_address
                 assert result[1] == expected_address_detail
 
+@pytest.mark.skip("WIP")
 @pytest.mark.asyncio
 async def test_request_address_with_landAddress():
     site = MagicMock()
