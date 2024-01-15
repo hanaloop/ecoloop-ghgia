@@ -122,8 +122,8 @@ The scripts should be run in the following order:
 scripts/script_import_region.py -> time taken = seconds
 scripts/script_import_sites.py -> time taken = 30 minutes
 scripts/script_import_organizations.py -> time taken = 10 minutes
-scripts/script_import_emission_data.py -> time taken = 1 minutes
-scripts/script_import_emission_data.py -> time taken = 10 minutes
+scripts/script_import_emission_data.py (Gir4)-> time taken = 1 minutes
+scripts/script_import_emission_data.py (Gir1)-> time taken = 10 minutes
 scripts/script_calculate_emissions.py -> time taken = 1 minute per year requested
 
 Each script can be run by typing:
