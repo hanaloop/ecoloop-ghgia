@@ -70,7 +70,9 @@ class IOrganizationService:
 
     @catch_errors_decorator
     @return_list
-    async def create(self, data: prisma.types.IOrganizationCreateInput) -> prisma.models.IOrganization:
+    async def create(
+        self, data: prisma.types.IOrganizationCreateInput
+    ) -> prisma.models.IOrganization:
         """
         Creates a new organization with the given data.
 
@@ -81,7 +83,7 @@ class IOrganizationService:
             None
         """
         return await self.prisma.iorganization.create(data=data)
-    
+
     async def update(
         self,
         data: prisma.models.IOrganization,
@@ -97,10 +99,12 @@ class IOrganizationService:
         Returns:
             None
         """
-        return await self.prisma.iorganization.update(where=where, data=data)
+        return await self.prisma.iorganization.update(where=where, data=data, include=['iorganization'])
 
     @catch_errors_decorator
-    async def delete(self, where: prisma.types.IOrganizationWhereInput) -> prisma.models.IOrganization:
+    async def delete(
+        self, where: prisma.types.IOrganizationWhereInput
+    ) -> prisma.models.IOrganization:
         """
         Deletes a record from the OrgSite table based on the given criteria.
 
@@ -139,7 +143,9 @@ class IOrganizationService:
 
     @catch_errors_decorator
     @return_list
-    async def create_many(self, data: prisma.types.IOrganizationCreateInput) -> list[prisma.models.IOrganization]:
+    async def create_many(
+        self, data: prisma.types.IOrganizationCreateInput
+    ) -> list[prisma.models.IOrganization]:
         """
         Create multiple organizations.
 
@@ -252,7 +258,7 @@ class IOrganizationService:
             data_source = os.path.basename(path)
         else:
             data_source = None
-        
+
         files = FileUtils()
         source = await files.read_to_pd(data_source, buffer, path)
         source.rename(columns=iorganization_map, inplace=True)
@@ -260,10 +266,38 @@ class IOrganizationService:
         source["dateModified"] = pd.to_datetime(source["dateModified"])
         upserted_data = []
         for row in tqdm(source.to_dict(orient="records"), total=len(source)):
-            upserted_data.append(await self.upsert(
-                data=row, where={"erefId": row["erefId"]}
-            ))
+            upserted_data.append(
+                await self.upsert(data=row, where={"erefId": row["erefId"]})
+            )
         return upserted_data
+
+    async def find_related_sites(
+        self, company_name: str
+    ) -> list[prisma.models.IOrgSite] | list[None]:
+        """
+        Searches for related sites to the given company name.
+
+        Args:
+            company_name (str): The name of the company.
+
+        Returns:
+            list[prisma.models.IOrgSite]: A list of related sites.
+                    
+        Example: 포스코 would first be searched as %포스코%, if no results are returned then %포%스%코% is searched.
+        """
+        ##TODO: Instead of breaking up the string, use known substrings to remove
+        sites = await self.prisma.query_raw(
+           query= f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%';""",
+        )
+        if len(sites) == 0:
+            company_name = [x for x in company_name]
+            company_name = "%".join(company_name)
+            sites = await self.prisma.query_raw(
+                query=f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%';""",
+            )
+        if len(sites) == 0:
+            sites = []
+        return sites
 
     # async def fetch_corp_details(self):
     #     """

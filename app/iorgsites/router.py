@@ -100,3 +100,4 @@ async def search(request: Request, uid: str):
 @router.delete("/iorgsites/{uid}")
 async def delete(uid):
     return await service.delete(where={"uid": uid})
+
