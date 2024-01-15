@@ -1,7 +1,8 @@
 
+from contextlib import asynccontextmanager
 import logging
 from fastapi import FastAPI
-from contextlib import asynccontextmanager
+from fastapi.responses import ORJSONResponse
 import uvicorn
 from app.iorganizations import router as iorganizations
 from app.iorgsites import router as iorgsites
@@ -24,8 +25,8 @@ async def lifespan(app: FastAPI):
     yield
     await client.disconnect()
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(iorgsites.router)
+app = FastAPI(lifespan=lifespan, default_response_class=ORJSONResponse)
+app.include_router(iorgsites.router, default_response_class=ORJSONResponse)
 app.include_router(iorganizations.router)
 app.include_router(emission_data.router)
 app.include_router(region.router)

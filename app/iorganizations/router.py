@@ -49,9 +49,11 @@ async def search(request: Request):
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
-        include=include
+        include=include,
     )  ##TODO: Group these to a single query
-    total_items = await service.fetch_count()
+    if content is None:
+        content = []
+    count = await service.fetch_count()
     response = adapter.to_pageable_response(
         query=query_params, response=content, count=total_items
     )

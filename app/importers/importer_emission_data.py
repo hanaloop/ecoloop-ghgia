@@ -2,6 +2,7 @@ import prisma
 from tqdm import tqdm
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
 from app.emission_data.adapters.gir1_import_adapter import GirImportAdapter
+from app.region.service import RegionService
 from app.utils.file import FileUtils
 from app.emission_data.service import IEmissionDataService
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
@@ -15,6 +16,7 @@ class EmissionDataImporter:
             "gir4": adapter_gir4,
             "gir1": adapter_gir1
         }
+        self.region_service = RegionService()
 
     async def get_adapter(self, data_source: str):
         return self.adapters[data_source]
@@ -48,8 +50,12 @@ class EmissionDataImporter:
         for row in tqdm(df_data.to_dict(orient="records"), total=len(df_data)):
             row = cast_dict_to_types(row, data_format)
             new_row = {key: value for key, value in row.items() if value is not None}
+            if new_row['regionUid']:
+                region = await self.region_service.fetch_one(where={"uid": new_row["regionUid"]})
+                new_row['latitude'] = region.latitude
+                new_row['longitude'] = region.longitude
             try:
-                await service.update_or_create(data=new_row, where={"source": new_row["source"], "categoryName": new_row["categoryName"], "periodStartDt": new_row["periodStartDt"], "periodEndDt": new_row["periodEndDt"], "pollutantId": new_row["pollutantId"]})
+                await service.update_or_create(data=new_row, where={"source": new_row["source"], "categoryName": new_row["categoryName"], "periodStartDt": new_row["periodStartDt"], "periodEndDt": new_row["periodEndDt"], "pollutantId": new_row["pollutantId"], "regionName": new_row["regionName"]})
             except Exception as e:
                 print(f'Error: row {new_row} failed. Perhaps it already exists. {e}')   
             finally:

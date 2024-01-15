@@ -41,10 +41,10 @@ class PrismaAdapter:
         if not response and isinstance(query["_pageNum"], int) and query["_pageSize"]:
             return
         response = PageableResponse(
-            number=int(query['_pageNum']),
+            number=int(query["_pageNum"]),
             numberOfElements=len(response),
-            size=int(query['_pageSize']),
-            first= int(query["_pageNum"]) == 0,
+            size=int(query["_pageSize"]),
+            first=int(query["_pageNum"]) == 0,
             last=int(query["_pageNum"]) == count // int(query["_pageSize"]),
             totalPages=count // int(query["_pageSize"]) + 1
             if count % int(query["_pageSize"]) > 0
@@ -53,3 +53,22 @@ class PrismaAdapter:
             content=response,
         )
         return response
+
+    def to_include_exclude_args(self, arg: list):
+        """
+        Generate a dictionary with each element in the input list as a key and set its value to True.
+
+        Args:
+            arg (list): The input list.
+
+        Returns:
+            dict: A dictionary with each element in the input list as a key and True as its value.
+        """
+        if not arg:
+            return
+        if not isinstance(arg, list):
+            try:
+                arg = [arg]
+            except:
+                raise ValueError(f"Cannot convert {arg} to list")
+        return {key: True for key in arg}
