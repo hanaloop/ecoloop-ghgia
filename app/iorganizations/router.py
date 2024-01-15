@@ -86,8 +86,8 @@ async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_organizations(data_source=data_source, buffer=file.file)
 
-@router.get("/iorganizations-find-links/")
-async def find_links(request: Request):
+@router.get("/find-related-sites/")
+async def find_related_sites(request: Request):
     companyName = request.query_params.get("companyName")
     if not companyName:
         raise HTTPException(status_code=400, detail="Bad request")

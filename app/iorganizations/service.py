@@ -285,6 +285,7 @@ class IOrganizationService:
                     
         Example: 포스코 would first be searched as %포스코%, if no results are returned then %포%스%코% is searched.
         """
+        ##TODO: Instead of breaking up the string, use known substrings to remove
         sites = await self.prisma.query_raw(
            query= f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%';""",
         )
