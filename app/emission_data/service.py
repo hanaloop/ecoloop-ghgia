@@ -161,16 +161,7 @@ class IEmissionDataService:
         Returns:
             An IEmissionData object that matches the given conditions or None if no record is found.
         """
-        return await self.prisma.iemissiondata.find_first(where=where, include=include)
-
-    async def fetch_all(self) -> list[prisma.models.IEmissionData]:
-        """
-        Fetches all data from the OrgSite table.
-
-        Returns:
-            A list of IEmissionData objects representing all records in the OrgSite table.
-        """
-        return await self.prisma.iemissiondata.find_many()
+        return await self.prisma.iemissiondata.find_first(where=where)
 
     async def create_many(self, data: prisma.types.IEmissionDataCreateInput) -> None:
         """
@@ -259,14 +250,14 @@ class IEmissionDataService:
     async def fetch_all_paginated(self):
         pass
 
-    async def fetch_count(self) -> int:
+    async def fetch_count(self, where: prisma.types.IEmissionDataWhereInput) -> int:
         """
         Fetches the count of the IEmissionData table.
 
         Returns:
             int: The count of the IEmissionData table.
         """
-        return await self.prisma.iemissiondata.count()
+        return await self.prisma.iemissiondata.count(where=where)
 
     # Business logic
 

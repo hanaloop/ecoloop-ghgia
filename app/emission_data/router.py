@@ -21,10 +21,12 @@ logger = logging.getLogger("api.iorgsites")
 
 
 @router.get("/iemissiondata-count")
+@router.get("/iemissiondata-count")
 async def count():
     return await service.fetch_count()
 
 
+@router.get("/iemissiondata-group")
 @router.get("/iemissiondata-group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
@@ -49,7 +51,7 @@ async def search(request: Request):
 async def get_by_id(uid: str):
     return await service.fetch_many(where={"uid": uid})
 
-@router.get("/iemissiondata/compare/")
+@router.get("/iemissiondata-mapdata/")
 async def fetch_grouped_by_region(request: Request):
     query_params = request.query_params._dict
     year_start = query_params["_year_from"] if "_year_from" in query_params else None
@@ -78,7 +80,7 @@ async def get_paged(request: Request):
     )  ##TODO: Group these to a single query
     if content is None:
         content = []
-    count = await service.fetch_count()
+    count = await service.fetch_count(where=query_args)
     response = adapter.to_pageable_response(
         query=query_params, response=content, count=count
     )
@@ -136,7 +138,6 @@ async def calculate(request: Request):
     for year in range(from_date, to_date):
         await service.calculate_emissions(year=year)
 
-
 @router.get("/iemissiondata-sources/")
 async def get_sources():
     sources = await service.fetch_many(distinct=["source"])
@@ -149,3 +150,11 @@ async def get_sources():
 async def create_org_emission(request: Request):
     body = await request.json()
     return await service.create_org_emission(data=body)
+
+@router.get("/iemissiondata-categories/")
+async def get_categories():
+    categories = await service.fetch_many(distinct=["categoryName"])
+    _categories = []
+    for category in categories:
+        _categories.append(category.categoryName)
+    return _categories

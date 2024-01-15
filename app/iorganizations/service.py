@@ -99,7 +99,7 @@ class IOrganizationService:
         Returns:
             None
         """
-        return await self.prisma.iorganization.update(where=where, data=data, include=['iorganization'])
+        return await self.prisma.iorganization.update(where=where, data=data)
 
     @catch_errors_decorator
     async def delete(
@@ -226,14 +226,14 @@ class IOrganizationService:
         pass
 
     @catch_errors_decorator
-    async def fetch_count(self) -> int:
+    async def fetch_count(self, where: prisma.types.IOrganizationWhereInput) -> int:
         """
         Fetches the count of the IOrganization table.
 
         Returns:
             int: The count of the IOrganization table.
         """
-        return await self.prisma.iorganization.count()
+        return await self.prisma.iorganization.count(where=where)
 
     # Business logic
 
