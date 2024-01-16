@@ -54,7 +54,7 @@ async def search(request: Request):
         content = []
     count = await service.fetch_count()
     response = adapter.to_pageable_response(
-        query=query_params, response=content, count=total_items
+        query=query_params, response=content, count=count
     )
     return response
 

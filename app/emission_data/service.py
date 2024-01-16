@@ -1,4 +1,6 @@
 import datetime
+from functools import reduce
+from typing import Optional
 from typing_extensions import Buffer
 import pandas as pd
 import prisma
@@ -7,12 +9,29 @@ from tqdm import tqdm
 from app.config.column_mapping import ipcc_to_gir, ipcc_to_gir_code
 from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
+from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
+from app.utils.data_types import divide_numeric_values
 from app.utils.file import FileUtils
 from app.utils.object import list_of_objects_to_dict
 from app.utils.data_types import to_dict
 from app.isitecategoryrels.service import ISiteCategoryRelService
 from app.utils.string import get_second_level_category
 from app.emission_data.models.partial_emission_data import create_partial_gir1
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
+
+class OrgEmission:
+    emissionYear: int
+    emissionSource: str
+    emissionScope1: Optional[float]
+    emissionScope2: Optional[float]
+    emissionTotal: float
+    energyElectricity: Optional[float]
+    energyHeat: Optional[float]
+    energyFuel: Optional[float]
+    energyTotal: Optional[float]
+    uid: str
+
 
 class IEmissionDataService:
     def __init__(self) -> None:
@@ -114,7 +133,7 @@ class IEmissionDataService:
         await self.prisma.iemissiondata.delete(where=where)
 
     async def fetch_many(
-        self, where: prisma.types.IEmissionDataWhereInput, include=None
+        self, where: prisma.types.IEmissionDataWhereInput | None = None, include=None, distinct=None
     ) -> list[prisma.models.IEmissionData]:
         """
         Fetches some data based on the given where clause.
@@ -125,7 +144,7 @@ class IEmissionDataService:
         Returns:
             A list of IEmissionData objects that match the given conditions.
         """
-        return await self.prisma.iemissiondata.find_many(where=where, include=include)
+        return await self.prisma.iemissiondata.find_many(where=where, include=include, distinct=distinct)
 
     async def fetch_one(
         self, where: prisma.types.IEmissionDataWhereInput
@@ -504,3 +523,49 @@ class IEmissionDataService:
                     },
                 )
 
+
+    async def create_org_emission(self, data: OrgEmission):
+        """
+        Creates an emission data record for an organization.
+
+        Args:
+            data (dict): The data to create the emission data record with.
+
+        Returns:
+            The created emission data record.
+        """
+        iorg = await self.prisma.iorganization.find_first(
+            where={
+                "uid": data.get("uid")
+            }, include={
+                "sites": True
+            }
+        )
+        if iorg.sites and len(iorg.sites) > 0:
+            data['periodStartDt'] = datetime.strptime(str(data.get('periodStartDt')) + '-01-01', '%Y-%m-%d')
+            data['periodEndDt'] = data['periodStartDt'] + relativedelta(years=1)
+            total_area = reduce(lambda x, y: x + y, [site.manufacturingFacilityArea for site in iorg.sites])
+            for site in iorg.sites:
+                ratio = site.manufacturingFacilityArea / total_area
+                emission = {}
+
+                emission["periodStartDt"] = data['periodStartDt']
+                emission["periodEndDt"] = data['periodEndDt']
+                emission["emissionTotal"] = data['emissionTotal'] * ratio
+                emission["emissionDirect"] = data.get('emissionDirect', 0) * ratio if data.get('emissionDirect', 0) else 0
+                emission["emissionIndirect"] = data.get('emissionIndirect', 0) * ratio if data.get('emissionDirect', 0) else 0
+                emission["siteUid"] = site.uid
+                emission["source"] = data['source']
+                emission["longitude"] = site.longitude
+                emission["latitude"] = site.latitude
+                emission["regionUid"] = site.addressRegionUid
+                emission["regionName"] = site.addressRegionName
+                emission['energyHeat'] = data.get('energyHeat', 0) * ratio if data.get('energyHeat', 0) else 0
+                emission['energyElectricity'] = data.get('energyElectricity', 0) * ratio if data.get('energyElectricity', 0) else 0
+                emission['energyFuel'] = data.get('energyFuel', 0) * ratio if data.get('energyFuel', 0) else 0
+                emission['energyTotal'] = data.get('energyTotal', 0) * ratio if data.get('energyTotal', 0) else 0
+                emission["periodLength"] = "1Y"
+                emission["pollutantId"] = "CO2eq"
+                await self.create(data=emission)
+                
+            
