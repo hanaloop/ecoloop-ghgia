@@ -1,11 +1,10 @@
 import os
-import prisma
 import pytest
 import pytest_asyncio
 from app.importers.importer_region import RegionImporter
 from app.database import get_connection
 from pytest_mock import MockerFixture
-
+from app.config.env_config import ENV_IS_GITHUB
 from app.region.service import RegionService
 
 @pytest_asyncio.fixture
@@ -18,7 +17,7 @@ async def setup_db():
     await get_connection().disconnect()
 
 @pytest.mark.asyncio
-@pytest.mark.skip("Need to create github actions for db connection")
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
 async def test_import_region(mocker: MockerFixture, setup_db):
     mocker.patch("app.region.service.RegionService.create_many", return_value=[])
 
@@ -29,7 +28,7 @@ async def test_import_region(mocker: MockerFixture, setup_db):
     assert RegionService().create_many.called ## pylint: disable=no-member
 
 @pytest.mark.asyncio
-@pytest.mark.skip("Need to create github actions for db connection")
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
 async def test_import_region_intergration(setup_db):
     importer = RegionImporter()
     filepath = "test_data/region.csv"

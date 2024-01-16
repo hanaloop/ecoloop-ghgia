@@ -152,6 +152,6 @@ def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
                         del data[key]
 
             except Exception as e:
-                logging.debug(f"Error casting value {value} to {annotation}: {e}")
+                logging.debug(f"Could not cast value {value} to {annotation}: {e}")
 
     return data

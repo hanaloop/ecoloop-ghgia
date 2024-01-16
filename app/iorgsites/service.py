@@ -354,18 +354,18 @@ class IOrgSiteService:
         Returns:
             The list of upserted data.
         """
-        # source = await self.prepare_data(buffer, path)
-        # returned_data = []
-        # field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
-        # # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
-        # # which means I have to destructure it later
-        # for index, row in tqdm(source.iterrows(), total=len(source)):
-        #     row = cast_dict_to_types(row, field_types)
-        #     ret = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
-        #     if ret:
-        #         returned_data.append(ret)
+        source = await self.prepare_data(buffer, path)
+        returned_data = []
+        field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+        # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
+        # which means I have to destructure it later
+        for index, row in tqdm(source.iterrows(), total=len(source)):
+            row = cast_dict_to_types(row, field_types)
+            ret = await self.upsert(data=row.to_dict(), where={"keyHash": row["keyHash"]})
+            if ret:
+                returned_data.append(ret)
         await self.update_relations_alt()
-        # return returned_data
+        return returned_data
 
     async def prepare_data(self, buffer: Buffer = None, path: str = None):
         if buffer and not path:

@@ -67,5 +67,35 @@ class FileUtils:
 
 
     def get_file_extension(self, data_source: str) -> str:
+        """
+        Returns the file extension of a given data source.
+
+        Parameters:
+            data_source (str): The path or filename of the data source.
+
+        Returns:
+            str: The file extension of the data source.
+        """
         return os.path.splitext(data_source)[1]
 
+    
+    def count_excel_rows(self, path, count_header=True)->int:
+        """
+        Counts the number of rows in an Excel file.
+
+        Args:
+            path (str): The path to the Excel file.
+            count_header (bool, optional): Whether to include the header row in the count. Defaults to True.
+
+        Returns:
+            int: The number of rows in the Excel file.
+        """
+        wb = openpyxl.load_workbook(path)
+        ws = wb.active
+        count = 0
+        for row in ws:
+            if not all([cell.value is None for cell in row]):
+                count += 1
+        if not count_header:
+            count -= 1
+        return count

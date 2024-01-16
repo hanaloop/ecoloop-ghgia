@@ -1,8 +1,8 @@
 import hashlib
 from unittest.mock import MagicMock
+from app.config.env_config import ENV_IS_GITHUB
 from app.database import get_connection
 from app.iorgsites.service import IOrgSiteService
-from app.requests.service import RequestService
 from app.isitecategoryrels.service import ISiteCategoryRelService
 import pytest_asyncio
 import pandas as pd 
@@ -10,7 +10,9 @@ import os
 import pytest
 import json
 from unittest.mock import patch
+from app.utils.file import FileUtils
 
+file = FileUtils()
 service = IOrgSiteService()
 rel_service = ISiteCategoryRelService()
 @pytest_asyncio.fixture
@@ -68,23 +70,22 @@ def test_hash_row():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip("Need to create github actions for db connection")
-async def test_upload_iorgsites_path( setup_db):
-    test_pickle = pd.read_pickle('test_data/factory_data.pkl')
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
+async def test_upload_iorgsites_path(setup_db):
     path = "test_data/factoryOnData.xlsx"
     data = await service.upload_iorgsites(path=path)
-    assert pd.testing.assert_frame_equal(test_pickle, data)
+    assert len(data) == file.count_excel_rows(path, count_header=False)
     
-@pytest.mark.skip("Need to create github actions for db connection")
-def test_upload_iorgsites_buffer_and_path(instance):
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
+def test_upload_iorgsites_buffer_and_path(setup_db):
     buffer = MagicMock()
     path = "./test_data/factoryOnData.xls"
-    instance.upload_iorgsites(buffer=buffer, path=path)
+    service.upload_iorgsites(buffer=buffer, path=path)
 
 @pytest.mark.asyncio
-@pytest.mark.skip("Need to create github actions for db connection")
-async def test_upload_iorgsites_no_arguments(instance):
-    instance.upload_iorgsites()
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
+async def test_upload_iorgsites_no_arguments(setup_db):
+    service.upload_iorgsites()
 
 @pytest.mark.skip("WIP")
 @pytest.mark.asyncio
