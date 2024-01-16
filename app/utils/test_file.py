@@ -2,7 +2,12 @@ import pytest
 import pandas as pd
 from io import StringIO
 from app.utils.file import FileUtils 
+import pytest
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from app.utils.file import FileUtils
 
+file = FileUtils()
 @pytest.mark.asyncio
 async def test_read_csv_to_pd():
     mock_file_content = "col1,col2\nval1,val2"
@@ -61,3 +66,30 @@ async def test_read_to_pd_file_type_routing(mocker):
     # Test for invalid file type
     with pytest.raises(Exception):
         await file_utils.read_to_pd(file_type="invalid", path="dummy/path")
+
+def test_empty_file(tmp_path):
+    # Test when the excel file is empty
+    path = tmp_path / "test.xlsx"
+    wb = Workbook()
+    wb.save(path)
+    assert file.count_excel_rows(str(path)) == 0
+
+def test_single_row(tmp_path):
+    # Test when the excel file has a single non-empty row
+    path = tmp_path / "test.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append([1, 2, 3])
+    wb.save(path)
+    assert file.count_excel_rows(str(path)) == 1
+
+def test_multiple_rows(tmp_path):
+    # Test when the excel file has multiple rows, some empty and some non-empty
+    path = tmp_path / "test.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append([1, 2, 3])
+    ws.append([None, None, None])
+    ws.append([4, 5, 6])
+    wb.save(path)
+    assert file.count_excel_rows(str(path)) == 2

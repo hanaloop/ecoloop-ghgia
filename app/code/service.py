@@ -18,7 +18,7 @@ class CodeService:
         """
         Deletes all records in the 'Code' table.
         """
-        await self.prisma.code.delete_many()
+        return await self.prisma.code.delete_many()
 
     async def update_or_create(
         self,
@@ -38,11 +38,11 @@ class CodeService:
         existing_record = await self.prisma.code.find_first(where=where)
 
         if existing_record:
-            await self.prisma.code.update(
+            return await self.prisma.code.update(
                 where={"uid": existing_record.uid}, data=data
             )
         else:
-            await self.prisma.code.create(data=data)
+            return await self.prisma.code.create(data=data)
 
     async def upsert(
         self,
@@ -61,7 +61,7 @@ class CodeService:
         Returns:
             None
         """
-        await self.prisma.code.upsert(
+        return await self.prisma.code.upsert(
             data={"create": data, "update": data}, where=where
         )
 
@@ -104,9 +104,9 @@ class CodeService:
         Returns:
             None
         """
-        await self.prisma.code.delete(where=where)
+        return await self.prisma.code.delete(where=where)
 
-    async def fetch_some(
+    async def fetch_many(
         self, where: prisma.types.CodeWhereInput, include: prisma.types.CodeInclude | None = None
     ) -> list[prisma.models.Code]:
         """
@@ -145,7 +145,7 @@ class CodeService:
         Returns:
             None: This function does not return anything.
         """
-        await self.prisma.code.create_many(data=data)
+        return await self.prisma.code.create_many(data=data)
 
     async def group_by(
         self, count=None, by=None, sum=None, order=None, having=None, where: prisma.types.CodeWhereInput = None
@@ -242,4 +242,4 @@ class CodeService:
         data_to_upload = df.to_dict(orient="records")
         for i, row in enumerate(data_to_upload):
             data_to_upload[i] = cast_dict_to_types(row, model_annotation)
-        await self.create_many(data=data_to_upload)
+        return await self.create_many(data=data_to_upload)

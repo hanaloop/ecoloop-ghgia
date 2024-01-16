@@ -45,7 +45,7 @@ class PrismaAdapter:
             numberOfElements=len(response),
             size=int(query["_pageSize"]),
             first=int(query["_pageNum"]) == 0,
-            last=int(query["_pageNum"]) == count // int(query["_pageSize"]),
+            last=int(query["_pageNum"]) == (count // int(query["_pageSize"]) ) if count > int(query["_pageSize"]) else True,
             totalPages=count // int(query["_pageSize"]) + 1
             if count % int(query["_pageSize"]) > 0
             else count // int(query["_pageSize"]),

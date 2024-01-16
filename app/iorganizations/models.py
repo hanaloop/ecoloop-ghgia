@@ -1,6 +1,8 @@
 from typing import Literal, Optional
 import datetime
-
+from deprecated import deprecated
+## pytest: skip
+@deprecated(reason="Use httpx method instead")
 class DartApiRequest():
     def __init__(self):
         self.corp_code:Optional[list[str]] = None

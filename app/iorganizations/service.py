@@ -117,7 +117,7 @@ class IOrganizationService:
         return await self.prisma.iorganization.delete(where=where)
 
     @catch_errors_decorator
-    async def fetch_some(
+    async def fetch_many(
         self, where: prisma.types.IOrganizationWhereInput
     ) -> list[prisma.models.IOrganization]:
         """

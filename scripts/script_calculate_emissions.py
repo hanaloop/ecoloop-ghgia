@@ -1,9 +1,9 @@
 import asyncio
 from app.database import get_connection
-from app.isitecategoryrels.service import ISiteCategoryRelService
+from app.emission_data.service import IEmissionDataService
 from app.foundation.arg_parse import parse_args
 
-service = ISiteCategoryRelService()
+service = IEmissionDataService()
 
 @parse_args
 async def main(year_from: int=2020, year_to: int = 2021):

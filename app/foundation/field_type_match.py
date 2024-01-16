@@ -2,6 +2,7 @@ import datetime
 import json
 from typing import Union, Dict, List, get_args
 from collections import defaultdict
+import logging
 import numpy as np
 import pandas as pd
 from pydantic.fields import FieldInfo
@@ -14,9 +15,8 @@ DEFAULT_ANNOTATIONS = {
     "int": 0,
     "float": 0.0,
     "bool": False,
-    "list": [],
-    "dict": {},
-    None: None,
+    "List": None,
+    "Dict": None,
     "datetime": datetime.datetime(1,1,1,1,1,1),
     
 }
@@ -152,6 +152,6 @@ def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
                         del data[key]
 
             except Exception as e:
-                print(f"Error converting data for key {key} to {annotation}: {e}")
+                logging.debug(f"Could not cast value {value} to {annotation}: {e}")
 
     return data

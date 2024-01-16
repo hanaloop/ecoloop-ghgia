@@ -1,5 +1,5 @@
 [run]
-OMIT = test.py
+OMIT = test.py, router*.py, script*.py
     main.py
     test/*
 

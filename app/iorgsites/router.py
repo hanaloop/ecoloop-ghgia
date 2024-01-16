@@ -29,8 +29,7 @@ async def group(count=None, by=None, sum=None, order=None, having=None):
 
 @router.post("/iorgsites/upload")
 async def upload(file: UploadFile):
-    data_source = file.filename
-    return await service.upload_iorgsites(data_source=data_source, buffer=file.file)
+    return await service.upload_iorgsites(buffer=file.file)
 
 
 @router.put("/iorgsites/addresses/update")
@@ -51,11 +50,11 @@ async def search(request: Request):
     )
 
 @router.get("/iorgsites/{uid}")
-async def search(uid: str):
-    return await service.fetch_some(where={"uid": uid})
+async def get_by_id(uid: str):
+    return await service.fetch_many(where={"uid": uid})
 
 @router.get("/iorgsites.paged/")
-async def search(request: Request):
+async def get_paged(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
@@ -75,7 +74,7 @@ async def search(request: Request):
 
 
 @router.post("/iorgsites/")
-async def search(request: Request):
+async def create(request: Request):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)
@@ -91,7 +90,7 @@ async def search(request: Request):
 
 
 @router.put("/iorgsites/{uid}")
-async def search(request: Request, uid: str):
+async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)

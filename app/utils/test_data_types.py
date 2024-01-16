@@ -4,14 +4,14 @@ import pytest
 
 from app.utils.data_types import diff, key_of_value, parse_to_date, to_dict
 
-class TestObject:
-    def __init__(self, x):
-        self.x = x
+
 
 def test_one_attribute_conversion():
     # Testing conversion of an object without __dict__ attribute
-
-    obj = TestObject(5)
+    class ObjectToTest:
+        def __init__(self, x):
+            self.x = x
+    obj = ObjectToTest(5)
     assert to_dict(obj) == {"x": 5}
 
 def test_object_with_list_conversion():

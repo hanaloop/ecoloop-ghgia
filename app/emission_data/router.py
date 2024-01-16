@@ -7,9 +7,11 @@ from app.foundation.field_type_match import (
     cast_dict_to_types,
     model_fields_into_type_map,
 )
+from app.utils.data_types import parse_to_date
 
 
 service = IEmissionDataService()
+
 router = APIRouter(
     prefix="/api",
     tags=["iemissiondata"],
@@ -18,12 +20,12 @@ adapter = PrismaAdapter()
 logger = logging.getLogger("api.iorgsites")
 
 
-@router.get("/iemissiondata/iemissiondata/count")
+@router.get("/iemissiondata-count")
 async def count():
     return await service.fetch_count()
 
 
-@router.get("/iemissiondata/group")
+@router.get("/iemissiondata-group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
@@ -108,12 +110,29 @@ async def delete(uid):
     return await service.delete(where={"uid": uid})
 
 
-@router.post("/iemissiondata/upload")
+@router.post("/iemissiondata-upload")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_data(data_source=data_source, buffer=file.file)
 
 
-@router.get("/iemissiondata-dateboundaries")
+@router.get("/iemissiondata-dateboundaries/")
 async def date_boundaries(request: Request):
-    return await service.get_date_boundaries()
+    query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params) 
+    if query_args:
+        source = query_args.get("source", None)
+    else:
+        raise HTTPException(status_code=400, detail="source is required")
+    return await service.get_date_boundaries(source=source)
+
+
+@router.get("/iemissiondata-calculate/")
+async def calculate(request: Request):
+    query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params)
+    from_date = parse_to_date(query_args["from"]).year
+    to_date = parse_to_date(query_args["to"]).year
+    for year in range(from_date, to_date):
+        await service.calculate_emissions(year=year)
+

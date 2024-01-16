@@ -1,20 +1,11 @@
-import datetime
-from tqdm import tqdm
 from app.database import get_connection
 import prisma
-from app.emission_data.models.partial_emission_data import create_partial_gir1
 from app.foundation.exception import catch_errors_decorator
-from app.emission_data.service import IEmissionDataService
-from app.config.column_mapping import ipcc_to_gir_code
-from app.utils.data_types import to_dict
-from app.utils.string import get_second_level_category
-import pandas as pd
 
 
 class ISiteCategoryRelService:
     def __init__(self):
         self.prisma = get_connection()
-        self.emission_data_service = IEmissionDataService()
 
     async def delete_all(self) -> int:
         """
@@ -128,7 +119,7 @@ class ISiteCategoryRelService:
         """
         await self.prisma.isitecategoryrel.delete(where=where)
 
-    async def fetch_some(
+    async def fetch_many(
         self,
         where: prisma.types.IOrgSiteWhereInput,
         include: prisma.types.IOrgSiteInclude | None = None,
@@ -253,112 +244,6 @@ class ISiteCategoryRelService:
             int: The count of the ISiteCategoryRel table.
         """
         return await self.prisma.isitecategoryrel.count()
-
-    async def calculate_emissions(self, year: int) -> None:
-        """
-        Calculate emission ratios and emissions for the given site category relations.
-
-        Args:
-            relations (list[prisma.models.ISiteCategoryRel]): A list of site category relations.
-
-        Returns:
-            None: This function does not return anything.
-        """
-        date_from = datetime.datetime(year, 1, 1)
-        date_to = datetime.datetime(year, 12, 31)
-        relations = await self.fetch_some(
-            where={"site": {"is": {"operationStartDt": {"lte": date_from}}}},
-            include={"site": True},
-        )
-
-        if not relations or len(relations) == 0:
-            raise Exception("No relations found")
-        relations_df = [to_dict(rel) for rel in relations]
-        relations_df = pd.DataFrame(relations_df)
-        totalContributionMagnitudeInSector = relations_df.groupby("categoryName")[
-            "contributionMagnitudeSector"
-        ].sum()
-
-        for relation in tqdm(
-            relations, total=len(relations), desc="calculate_emission_ratios"
-        ):
-            if relation.categoryName is None:
-                continue
-
-            if relation.categoryLevel > 2:
-                # E.g. category_name_gir4 = 2.A
-                category_name = relation.categoryName
-                total_emission = await self.emission_data_service.fetch_one(
-                    where={
-                        "categoryName": category_name,
-                        "periodStartDt": {"gte": date_from},
-                        "periodEndDt": {"lte": date_to},
-                        "pollutantId": "CO2",
-                        "source":"gir4",
-                    }
-                )
-            else:
-                category_name = ipcc_to_gir_code.get(
-                    get_second_level_category(relation.categoryName)
-                )
-                total_emission = await self.emission_data_service.group_by(
-                    by=["categoryName", "pollutantId"],
-                    sum={"emissionTotal": True},
-                    having={
-                        "categoryName": category_name,
-                    },
-                    where={
-                        "periodStartDt": {"gte": date_from},
-                        "periodEndDt": {"lte": date_to},
-                        "source": "gir1",
-                    },
-                )
-                category_name = relation.categoryName
-                total_emission = total_emission[0]
-                total_emission["emissionTotal"] = (
-                    total_emission["_sum"]["emissionTotal"] / 1000
-                )  ##TODO: Create unit conversion function
-                total_emission = create_partial_gir1(
-                    total_emission=total_emission, categoryName=category_name, date_from=date_from, date_to=date_to
-                )
-
-            if total_emission is None or total_emission.emissionTotal is None:
-                continue
-            total_emission_gas = total_emission.emissionTotal
-            matching_item = totalContributionMagnitudeInSector.loc[category_name]
-            if matching_item is not None:
-                contributionRatio = (
-                    relation.contributionMagnitudeSector / matching_item
-                )
-
-                emission = contributionRatio * total_emission_gas
-                await self.emission_data_service.update_or_create(
-                    data={
-                        "categoryName": category_name,
-                        "periodStartDt": total_emission.periodStartDt,
-                        "periodEndDt": total_emission.periodEndDt,
-                        "emissionTotal": emission,
-                        "periodLength": total_emission.periodLength,
-                        "source": "calc:" + total_emission.source,
-                        "regionUid": relation.site.addressRegionUid,
-                        "siteUid": relation.siteUid,
-                        "pollutantId": total_emission.pollutantId,
-                        "regionName": relation.site.addressSubRegion,
-                        "longitude": relation.site.longitude,
-                        "latitude": relation.site.latitude,
-                        "categoryRelUid": relation.uid,
-                    },
-                    where={
-                        "categoryName": relation.categoryName,
-                        "periodStartDt": total_emission.periodStartDt,
-                        "periodEndDt": total_emission.periodEndDt,
-                        "siteUid": relation.siteUid,
-                        "pollutantId": total_emission.pollutantId,
-                        "source": "calc:" + total_emission.source,
-                        "regionUid": relation.site.addressRegionUid,
-                        "categoryRelUid": relation.uid,
-                    },
-                )
 
     # async def api_to_gir_address(self):
     #     """
