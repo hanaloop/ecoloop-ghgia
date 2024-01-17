@@ -1,9 +1,14 @@
+import json
 import os
 from typing_extensions import Buffer
 import prisma
+from tqdm import tqdm
 from app.database import get_connection
 from app.utils.file import FileUtils
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
+from app.emission_data.service import IEmissionDataService
+from app.config.column_mapping import ipcc_to_gir_code
+import logging
 
 class CodeService:
     """
@@ -11,6 +16,8 @@ class CodeService:
     """
     def __init__(self):
         self.prisma = get_connection()
+        self.emission_service = IEmissionDataService()
+        self.logger = logging.getLogger(__name__)
 
       
     async def delete_all(self):
@@ -106,7 +113,7 @@ class CodeService:
         return await self.prisma.code.delete(where=where)
 
     async def fetch_many(
-        self, where: prisma.types.CodeWhereInput, include: prisma.types.CodeInclude | None = None
+        self, where: prisma.types.CodeWhereInput = None, include: prisma.types.CodeInclude | None = None
     ) -> list[prisma.models.Code]:
         """
         Fetches some data based on the given where clause.
@@ -117,6 +124,7 @@ class CodeService:
         Returns:
             A list of Code objects that match the given conditions.
         """
+        self.logger.debug(f"fetch_many where: {where}")
         return await self.prisma.code.find_many(where=where, include=include)
 
     async def fetch_one(
@@ -241,4 +249,25 @@ class CodeService:
         data_to_upload = df.to_dict(orient="records")
         for i, row in enumerate(data_to_upload):
             data_to_upload[i] = cast_dict_to_types(row, model_annotation)
-        return await self.create_many(data=data_to_upload)
+        await self.create_many(data=data_to_upload)
+
+    async def link_emissions_to_codes(self):
+        emission_data = await self.emission_service.fetch_many()
+        codes: list[prisma.models.Code] = await self.fetch_many(where={"type":"sourcesinkcategory"})
+
+        for emission in tqdm(emission_data, total=len(emission_data)):
+            try:
+                if emission.categoryName in ipcc_to_gir_code.values():
+                    categoryName = next((key for key, value in ipcc_to_gir_code.items() if value == emission.categoryName), None)
+                    emission.categoryUid = next((code.uid for code in codes if code.code == categoryName), None)
+                else:
+                    emission.categoryUid = next((code.uid for code in codes if code.code == emission.categoryName.rstrip(".")), None)
+                ##TODO: This is an error when parsin gir4, needs to be fixed there, not here
+                emission_dict = emission.dict()
+                cast_dict_to_types(emission_dict, model_fields_into_type_map(prisma.models.IEmissionData.model_fields))
+                await self.emission_service.update(data=emission_dict, where={"uid": emission.uid})
+            except Exception as e:
+                pass
+
+            
+        

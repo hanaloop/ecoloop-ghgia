@@ -250,7 +250,7 @@ class IEmissionDataService:
     async def fetch_all_paginated(self):
         pass
 
-    async def fetch_count(self, where: prisma.types.IEmissionDataWhereInput) -> int:
+    async def fetch_count(self, where: prisma.types.IEmissionDataWhereInput = None) -> int:
         """
         Fetches the count of the IEmissionData table.
 
@@ -288,7 +288,13 @@ class IEmissionDataService:
         self,
         year_start: str,
         year_end: str,
+        category: Dict[str, Dict[str, str]]  = None,
     ):
+        if category is None:
+            category = {}
+            category_gir_1 = {"categoryName": {"in": list(ipcc_to_gir_code.keys())}}
+        else:
+            category_gir_1 = category
         if year_start is None:
             year_start = "2019-01-01T00:00:00.000Z"
         if year_end is None:
@@ -299,6 +305,7 @@ class IEmissionDataService:
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category
             },
             include={"region": True},
         )
@@ -309,6 +316,9 @@ class IEmissionDataService:
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category_gir_1
+                
+
             },
             include={"region": True},
         )
@@ -316,9 +326,11 @@ class IEmissionDataService:
         gir_1 = await self.prisma.iemissiondata.group_by(
             where={
                 "source": "gir1",
-                "categoryName": {"in": list(ipcc_to_gir_code.values())},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category_gir_1,
+
+
             },
             by=[
                 "categoryName",
@@ -326,6 +338,7 @@ class IEmissionDataService:
                 "source",
                 "latitude",
                 "longitude",
+                
             ],
             sum={"emissionTotal": True},
         )
@@ -455,11 +468,9 @@ class IEmissionDataService:
                     }
                 )
             else:
-                category_name = ipcc_to_gir_code.get(
-                    get_second_level_category(relation.categoryName)
-                )
+                category_name = relation.categoryName
                 total_emission = await self.group_by(
-                    by=["categoryName", "pollutantId"],
+                    by=["categoryName", "pollutantId", "categoryUid"],
                     sum={"emissionTotal": True},
                     having={
                         "categoryName": category_name,
@@ -505,6 +516,7 @@ class IEmissionDataService:
                         "longitude": relation.site.longitude,
                         "latitude": relation.site.latitude,
                         "categoryRelUid": relation.uid,
+                        "categoryUid": total_emission.categoryUid,
                     },
                     where={
                         "categoryName": relation.categoryName,

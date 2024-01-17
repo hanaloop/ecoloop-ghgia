@@ -25,7 +25,7 @@ class PrismaAdapter:
                 continue
             if len(key.split(":")) > 1:
                 field, operator = key.split(":")
-                if prop and len(prop.split(",")) > 1:
+                if prop and len(prop.split(",")) > 1 or operator == "in":
                     operands[field] = {operator: prop.split(",")}
                 elif len(key.split(":")) > 1:
                     operands[field] = {key.split(":")[1]: prop}

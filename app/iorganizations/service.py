@@ -226,7 +226,7 @@ class IOrganizationService:
         pass
 
     @catch_errors_decorator
-    async def fetch_count(self, where: prisma.types.IOrganizationWhereInput) -> int:
+    async def fetch_count(self, where: prisma.types.IOrganizationWhereInput = None) -> int:
         """
         Fetches the count of the IOrganization table.
 

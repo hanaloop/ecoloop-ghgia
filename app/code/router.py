@@ -7,7 +7,7 @@ from app.foundation.field_type_match import cast_dict_to_types, model_fields_int
 
 adapter = PrismaAdapter()
 service = CodeService()
-logger = logging.getLogger("api.code")
+logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api",
     tags=["code"],
@@ -35,7 +35,7 @@ async def get_paged(request: Request):
     return response
 
 @router.get("/code/")
-async def search(request: Request):
+async def get(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
     include = query_params.get("_include", None)

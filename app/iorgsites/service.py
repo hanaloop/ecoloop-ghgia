@@ -277,7 +277,7 @@ class IOrgSiteService:
             yield results
 
     @catch_errors_decorator
-    async def fetch_count(self, where: prisma.types.IOrgSiteWhereInput) -> int:
+    async def fetch_count(self, where: prisma.types.IOrgSiteWhereInput = None) -> int:
         """
         Fetches the count of the iorgsite table.
 
@@ -642,4 +642,3 @@ class IOrgSiteService:
             await self.update_relation_single(site=site)
         except Exception as e:
             return e
-

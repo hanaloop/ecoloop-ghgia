@@ -12,7 +12,7 @@ router = APIRouter(
 )
 adapter = PrismaAdapter()
 
-logger = logging.getLogger("uvicorn")
+logger = logging.getLogger(__name__)
 
 
 @router.get("/iorganizations-count")
@@ -21,7 +21,7 @@ async def count():
 
 @router.get("/iorganizations/{uid}")
 async def get_by_id(uid: str):
-    return await service.fetch_some(where={"uid": uid})
+    return await service.fetch_many(where={"uid": uid})
 
 @router.get("/iorganizations-group")
 async def group(count=None, by=None, sum=None, order=None, having=None):

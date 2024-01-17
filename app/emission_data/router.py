@@ -17,7 +17,7 @@ router = APIRouter(
     tags=["iemissiondata"],
 )
 adapter = PrismaAdapter()
-logger = logging.getLogger("api.iorgsites")
+logger = logging.getLogger(__name__)
 
 
 @router.get("/iemissiondata-count")
@@ -54,11 +54,12 @@ async def get_by_id(uid: str):
 @router.get("/iemissiondata-mapdata/")
 async def fetch_grouped_by_region(request: Request):
     query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params)
     year_start = query_params["_year_from"] if "_year_from" in query_params else None
     year_end = query_params["_year_to"] if "_year_to" in query_params else None
     if year_start is None or year_end is None:
         raise HTTPException(status_code=400, detail="year_start and year_end are required")
-    response = await service.fetch_grouped_by_region( year_start=year_start, year_end=year_end)
+    response = await service.fetch_grouped_by_region( year_start=year_start, year_end=year_end, category=query_args)
     return response
 
 @router.get("/iemissiondata.paged/")
@@ -158,3 +159,12 @@ async def get_categories():
     for category in categories:
         _categories.append(category.categoryName)
     return _categories
+
+@router.get("/iemissiondata-regions/")
+async def get_regions():
+    regions = await service.fetch_many(distinct=["regionName"])
+    _regions = []
+    for region in regions:
+        if region.regionName is not None and region.regionName != "":
+            _regions.append(region.regionName)
+    return _regions

@@ -9,7 +9,9 @@ from app.iorgsites import router as iorgsites
 from app.region import router as region
 from app.emission_data import router as emission_data
 from app.database import  get_connection
-logger = logging.getLogger("uvicorn")
+from app.code import router as code
+
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
@@ -20,6 +22,7 @@ client = get_connection()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Connecting to database...")
+    
     get_connection()
     await client.connect()
     yield
@@ -30,6 +33,10 @@ app.include_router(iorgsites.router, default_response_class=ORJSONResponse)
 app.include_router(iorganizations.router)
 app.include_router(emission_data.router)
 app.include_router(region.router)
+app.include_router(code.router)
+
+api_logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 

@@ -8,11 +8,11 @@ from app.foundation.field_type_match import cast_dict_to_types, model_fields_int
 
 service = IOrgSiteService()
 adapter = PrismaAdapter()
+api_logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api",
     tags=["iorgsites"],
 )
-logger = logging.getLogger("api.iorgsites")
 
 
 @router.get("/iorgsites-count")
