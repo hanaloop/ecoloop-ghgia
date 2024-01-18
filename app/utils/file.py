@@ -8,7 +8,7 @@ class FileUtils:
         """
         Reads a file into a pandas dataframe. Generic implementation, finds file type automatically.
         """
-        if not file and not path:
+        if (not file and not path) or (file and path):
             raise Exception("Either file or path must be provided")
         
         file = file or path
