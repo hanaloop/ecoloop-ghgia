@@ -1,5 +1,6 @@
 import datetime
 from typing import Optional
+import logging
 from typing_extensions import Buffer
 import pandas as pd
 import prisma
@@ -35,6 +36,7 @@ class IEmissionDataService:
     def __init__(self) -> None:
         self.prisma = get_connection()
         self.rel_service = ISiteCategoryRelService()
+        self.logger = logging.getLogger(__name__)
 
     async def delete_all(self):
         """
@@ -290,7 +292,7 @@ class IEmissionDataService:
         year_end: str,
         category: Dict[str, Dict[str, str]]  = None,
     ):
-        if category is None:
+        if category is None or not category:
             category = {}
             category_gir_1 = {"categoryName": {"in": list(ipcc_to_gir_code.keys())}}
         else:
