@@ -1,4 +1,3 @@
-import pytest
 from app.foundation.adapter_prisma import PrismaAdapter
 
 adapter = PrismaAdapter()

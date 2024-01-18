@@ -2,7 +2,7 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-from app.utils.data_types import diff, key_of_value, parse_to_date, to_dict
+from app.utils.data_types import diff, key_of_value, parse_to_date, to_dict, try_cast
 
 
 
@@ -81,3 +81,19 @@ def test_parse_to_date():
 
     # Testing string with whitespace
     assert parse_to_date(" ", dt_boundary_from=datetime(2020, 1, 1), dt_boundary_to=datetime(2021, 1, 1)) == None
+
+def test_try_cast():
+    # Testing with integer type
+    assert try_cast("123", int) == True
+    assert try_cast("abc", int) == False
+    assert try_cast("12.3", int) == False
+    
+    # Testing with float type
+    assert try_cast("12.3", float) == True
+    assert try_cast("abc", float) == False
+    assert try_cast("123", float) == True
+    
+    # Testing with string type
+    assert try_cast("abc", str) == True
+    assert try_cast("123", str) == True
+    assert try_cast("12.3", str) == True

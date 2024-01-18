@@ -1,6 +1,5 @@
 import datetime
 from typing_extensions import Buffer
-import numpy as np
 import pandas as pd
 import prisma
 from sklearn.preprocessing import MinMaxScaler

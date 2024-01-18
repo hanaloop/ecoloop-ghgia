@@ -97,3 +97,20 @@ def parse_to_date(
     except ValueError:
         return None
 
+
+def try_cast(value, type: type)-> bool:
+    """
+    A function that tries to cast a given value to a specified type.
+
+    Parameters:
+        value (Any): The value to be casted.
+        type (type): The type to cast the value to.
+
+    Returns:
+        bool: True if the value can be casted to the specified type, False otherwise.
+    """
+    try:
+        type(value)
+        return True
+    except:
+        return False

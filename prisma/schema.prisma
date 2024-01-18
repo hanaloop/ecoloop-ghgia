@@ -114,6 +114,9 @@ model IOrganization {
   /// 업종
   sectorUid           String?  @db.VarChar(40)
   sector              Sector?  @relation(fields: [sectorUid], references: [uid])
+  industry            String?  @db.VarChar
+  sectorSub           String?  @db.VarChar
+  sectorMain          String?  @db.VarChar
 
   specialties         String[] // tags of words: 
 
@@ -149,6 +152,7 @@ model IOrganization {
   lastPeriodEndDt     DateTime?
 
   features            Json?
+  
 
   sites               IOrgSite[]
   financials          IFinancial[]
@@ -161,6 +165,7 @@ model IOrganization {
   @@index([sectorUid])
   @@index([addressRegionUid])
   @@index([addressCountryId, addressLocality])
+  @@index([sectorMain, sectorSub])
 }
 
 model IOrgSite {
@@ -344,14 +349,16 @@ model IEmissionData {
   periodEndDt	        DateTime
 
   pollutantId         String?  @db.VarChar /// pollutant: co2eq, co2, ch4, n2o, nox, sox, etc.
-  emissionDirect      Float?
-  emissionElec        Float?
-  emissionSteam       Float?
-  emissionOthers      Json?    @default("{}")
+  energyElectricity   Float?
+  energyFuel          Float?
+  energyHeat          Float?
+  energyTotal         Float?
+  emissionDirect      Float?  //Scope 1
+  emissionIndirect    Float?  //Scope 2  emissionOthers      Json?    @default("{}")
   emissionTotal       Float
 
   // TODO: add pollutantId in 
-  @@unique([periodStartDt, periodEndDt, regionUid, categoryUid, pollutantId, siteUid, source])
+  @@unique([periodStartDt, periodEndDt, regionUid, categoryUid, pollutantId, siteUid, organizationUid, source])
 
   // TODO: add index - @@unique([periodStartDt, periodEndDt, latitude, longitude, pollutantId, categoryUid])
   @@index([status])

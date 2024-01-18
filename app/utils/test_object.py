@@ -1,4 +1,3 @@
-import pytest
 
 from app.utils.data_types import to_dict
 

@@ -1,8 +1,4 @@
-import os
 import pytest
-from unittest.mock import MagicMock, patch
-from app.database import get_connection
-import pytest_asyncio
 
 from app.importers.importer_emission_data import EmissionDataImporter
 

@@ -383,3 +383,17 @@ emission_intensity = {
         "per_sqrmt": 0.00001114148534
     }
 }
+
+ets_report_col_map = {
+"업체명": "legalName",
+"대상년도": "year",
+"부분": "industry",
+"지정구분": "sectorMain",
+"계획업종": "sectorSub",
+"지정업종": "sectorSub",
+"온실가스배출량(tCO2-eq)": "emissionTotal",
+"에너지 사용량(TJ)": "energyTotal",
+"중소기업 여부": "sizeCategory",
+
+}
+
