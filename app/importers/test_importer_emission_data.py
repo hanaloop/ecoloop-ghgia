@@ -44,7 +44,7 @@ def test_adapter_not_found_in_file(obj):
     result = obj.get_adapter_from_file(filepath)
     assert result is None
 
-@pytest.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
+@pytest.mark.skipif(ENV_IS_GITHUB, reason="database not available on github actions env")
 @pytest.mark.asyncio
 async def test_import_file(obj, setup_db):
     filepath = './test_data/emission_data.gir1.import.csv'
