@@ -12,7 +12,7 @@ async def test_create_org_emission_no_sites(mocker):
 
     data = {
         "uid": "org_uid",
-        "year": 2020,
+        "periodStartDt": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,
@@ -36,7 +36,7 @@ async def test_create_org_emission_one_site_zero_area(mocker):
 
     data = {
         "uid": "org_uid",
-        "year": 2020,
+        "periodStartDt": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,
@@ -86,7 +86,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
     # Test case 3: One site with non-zero manufacturing facility area
     data = {
         "uid": "org_uid",
-        "year": 2020,
+        "periodStartDt": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,

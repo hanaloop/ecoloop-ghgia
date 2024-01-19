@@ -1,5 +1,4 @@
 import datetime
-from functools import reduce
 from typing import Optional
 from typing_extensions import Buffer
 import pandas as pd
@@ -9,11 +8,6 @@ from tqdm import tqdm
 from app.config.column_mapping import ipcc_to_gir, ipcc_to_gir_code
 from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
-from app.foundation.field_type_match import (
-    cast_dict_to_types,
-    model_fields_into_type_map,
-)
-from app.utils.data_types import divide_numeric_values
 from app.utils.file import FileUtils
 from app.utils.object import list_of_objects_to_dict
 from app.utils.data_types import to_dict
@@ -538,7 +532,7 @@ class IEmissionDataService:
             where={"uid": data.get("uid")}, include={"sites": True}
         )
         created_emissions = []
-        period_start_dt = datetime.strptime(str(data.get("year")) + "-01-01", "%Y-%m-%d")
+        period_start_dt = datetime.strptime(str(data.get("periodStartDt")) + "-01-01", "%Y-%m-%d")
         period_end_dt = period_start_dt + relativedelta(years=1)
         total_area = sum(
             site.manufacturingFacilityArea for site in iorg.sites if site.manufacturingFacilityArea
@@ -552,19 +546,19 @@ class IEmissionDataService:
             emission = {
                 "periodStartDt": period_start_dt,
                 "periodEndDt": period_end_dt,
-                "emissionTotal": data["emissionTotal"] * ratio,
-                "emissionDirect": data.get("emissionScope1", 0) * ratio,
-                "emissionIndirect": data.get("emissionScope2", 0) * ratio,
+                "emissionTotal": data["emissionTotal"] * ratio if data["emissionTotal"] else 0,
+                "emissionDirect": data.get("emissionScope1", 0) * ratio if data.get("emissionScope1", 0) else 0,
+                "emissionIndirect": data.get("emissionScope2", 0) * ratio if data.get("emissionScope2", 0) else 0,
                 "siteUid": site.uid,
                 "source": data["source"],
                 "longitude": site.longitude,
                 "latitude": site.latitude,
                 "regionUid": site.addressRegionUid,
                 "regionName": site.addressRegionName,
-                "energyHeat": data.get("energyHeat", 0) * ratio,
-                "energyElectricity": data.get("energyElectricity", 0) * ratio,
-                "energyFuel": data.get("energyFuel", 0) * ratio,
-                "energyTotal": data.get("energyTotal", 0) * ratio,
+                "energyHeat": data.get("energyHeat", 0) * ratio if data.get("energyHeat", 0) else 0,
+                "energyElectricity": data.get("energyElectricity", 0) * ratio if data.get("energyElectricity", 0) else 0,
+                "energyFuel": data.get("energyFuel", 0) * ratio if data.get("energyFuel", 0) else 0,
+                "energyTotal": data.get("energyTotal", 0) * ratio if data.get("energyTotal", 0) else 0,
                 "periodLength": "1Y",
                 "pollutantId": "tCO2eq",
             }
@@ -576,14 +570,14 @@ class IEmissionDataService:
                 "emissionTotal": data["emissionTotal"],
                 "periodStartDt": period_start_dt,
                 "periodEndDt": period_end_dt,
-                "uid": data["uid"],
+                "organizationUid": data["uid"],
                 "energyElectricity": data.get("energyElectricity", 0),
                 "energyHeat": data.get("energyHeat", 0),
                 "energyFuel": data.get("energyFuel", 0),
                 "energyTotal": data.get("energyTotal", 0),
                 "periodLength": "1Y",
                 "source": data["source"],
-                "pollutantId": "tCO2",
+                "pollutantId": "tCO2eq",
             },
-            where={"uid": data["uid"]},
+            where={"organizationUid": data["uid"], "periodStartDt": period_start_dt, "periodEndDt": period_end_dt, "source": data["source"]},
         )
