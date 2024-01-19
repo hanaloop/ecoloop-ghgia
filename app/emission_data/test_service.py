@@ -12,7 +12,7 @@ async def test_create_org_emission_no_sites(mocker):
 
     data = {
         "uid": "org_uid",
-        "periodStartDt": datetime.now(),
+        "year": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,
@@ -21,8 +21,9 @@ async def test_create_org_emission_no_sites(mocker):
         "energyTotal": 100,
         "sites": None
     }
-    model_data = prisma.models.IOrganization.model_construct({"uid": "org_uid", "sites": []})
+    model_data = prisma.models.IOrganization.model_construct(**{"uid": "org_uid", "sites": []})
     mocker.patch("app.emission_data.service.IEmissionDataService.create")
+    mocker.patch("app.emission_data.service.IEmissionDataService.update_or_create")
     mocker.patch("prisma.client.actions.IOrganizationActions.find_first", return_value=model_data)
     await service.create_org_emission(data)
     prisma.client.actions.IOrganizationActions.find_first.assert_called_once()
@@ -35,8 +36,7 @@ async def test_create_org_emission_one_site_zero_area(mocker):
 
     data = {
         "uid": "org_uid",
-        "periodStartDt": 2020,
-        "periodEndDt": 2021,
+        "year": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,
@@ -64,13 +64,14 @@ async def test_create_org_emission_one_site_zero_area(mocker):
         "energyFuel": 0,
         "energyTotal": 0,
         "periodLength": "1Y",
-        "pollutantId": "CO2eq",
+        "pollutantId": "tCO2eq",
         "siteUid": "site_uid"
 
     }
     site = prisma.models.IOrgSite.model_construct(**site)
     model_data = prisma.models.IOrganization.model_construct(**{"uid": "org_uid", "sites": [site]})
     mocker.patch("app.emission_data.service.IEmissionDataService.create")
+    mocker.patch("app.emission_data.service.IEmissionDataService.update_or_create")
     mocker.patch("prisma.client.actions.IOrganizationActions.find_first", return_value=model_data)
     return_value = await service.create_org_emission(data)
     prisma.client.actions.IOrganizationActions.find_first.assert_called_once()
@@ -85,8 +86,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
     # Test case 3: One site with non-zero manufacturing facility area
     data = {
         "uid": "org_uid",
-        "periodStartDt": 2020,
-        "periodEndDt": 2021,
+        "year": 2020,
         "emissionTotal": 100,
         "source": "source",
         "energyHeat": 50,
@@ -122,7 +122,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
         "energyTotal": 75,
         "siteUid": "site_uid_1",
         "periodLength": "1Y",
-        "pollutantId": "CO2eq"
+        "pollutantId": "tCO2eq"
     }, 
     {
         "periodStartDt": datetime(2020, 1, 1),
@@ -141,7 +141,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
         "energyTotal": 25.0,
         "siteUid": "site_uid_2",
         "periodLength": "1Y",
-        "pollutantId": "CO2eq"
+        "pollutantId": "tCO2eq"
 
 
     }]
@@ -149,6 +149,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
     site_2 = prisma.models.IOrgSite.model_construct(**sites[1])
     model_data = prisma.models.IOrganization.model_construct(**{"uid": "org_uid", "sites": [site_1, site_2]})
     mocker.patch("app.emission_data.service.IEmissionDataService.create")
+    mocker.patch("app.emission_data.service.IEmissionDataService.update_or_create")
     mocker.patch("prisma.client.actions.IOrganizationActions.find_first", return_value=model_data)
     await service.create_org_emission(data)
     prisma.client.actions.IOrganizationActions.find_first.assert_called_once()

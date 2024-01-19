@@ -9,7 +9,10 @@ from tqdm import tqdm
 from app.config.column_mapping import ipcc_to_gir, ipcc_to_gir_code
 from app.database import get_connection
 from app.emission_data.adapters.gir4_import_adapter import GirCategoryAdapter
-from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
+from app.foundation.field_type_match import (
+    cast_dict_to_types,
+    model_fields_into_type_map,
+)
 from app.utils.data_types import divide_numeric_values
 from app.utils.file import FileUtils
 from app.utils.object import list_of_objects_to_dict
@@ -20,7 +23,8 @@ from app.emission_data.models.partial_emission_data import create_partial_gir1
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 
-class OrgEmission:
+
+class Emission:
     emissionYear: int
     emissionSource: str
     emissionScope1: Optional[float]
@@ -133,7 +137,10 @@ class IEmissionDataService:
         await self.prisma.iemissiondata.delete(where=where)
 
     async def fetch_many(
-        self, where: prisma.types.IEmissionDataWhereInput | None = None, include=None, distinct=None
+        self,
+        where: prisma.types.IEmissionDataWhereInput | None = None,
+        include=None,
+        distinct=None,
     ) -> list[prisma.models.IEmissionData]:
         """
         Fetches some data based on the given where clause.
@@ -144,7 +151,9 @@ class IEmissionDataService:
         Returns:
             A list of IEmissionData objects that match the given conditions.
         """
-        return await self.prisma.iemissiondata.find_many(where=where, include=include, distinct=distinct)
+        return await self.prisma.iemissiondata.find_many(
+            where=where, include=include, distinct=distinct
+        )
 
     async def fetch_one(
         self, where: prisma.types.IEmissionDataWhereInput, include=None
@@ -290,7 +299,7 @@ class IEmissionDataService:
         df["category"] = df["categoryName"].map(inverse_map)
         return df
 
-    async def fetch_grouped_by_region( ##TODO: Refactor into smaller pieces
+    async def fetch_grouped_by_region(  ##TODO: Refactor into smaller pieces
         self,
         year_start: str,
         year_end: str,
@@ -415,7 +424,7 @@ class IEmissionDataService:
         )
 
         return boundaries[0]
-    
+
     async def calculate_emissions(self, year: int) -> None:
         """
         Calculate emissions for a given year.
@@ -457,7 +466,7 @@ class IEmissionDataService:
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
                         "pollutantId": "CO2",
-                        "source":"gir4",
+                        "source": "gir4",
                     }
                 )
             else:
@@ -482,7 +491,10 @@ class IEmissionDataService:
                     total_emission["_sum"]["emissionTotal"] / 1000
                 )  ##TODO: Create unit conversion function
                 total_emission = create_partial_gir1(
-                    total_emission=total_emission, categoryName=category_name, date_from=date_from, date_to=date_to
+                    total_emission=total_emission,
+                    categoryName=category_name,
+                    date_from=date_from,
+                    date_to=date_to,
                 )
 
             if total_emission is None or total_emission.emissionTotal is None:
@@ -490,9 +502,7 @@ class IEmissionDataService:
             total_emission_gas = total_emission.emissionTotal
             matching_item = totalContributionMagnitudeInSector.loc[category_name]
             if matching_item is not None:
-                contributionRatio = (
-                    relation.contributionMagnitudeSector / matching_item
-                )
+                contributionRatio = relation.contributionMagnitudeSector / matching_item
 
                 emission = contributionRatio * total_emission_gas
                 await self.update_or_create(
@@ -523,50 +533,57 @@ class IEmissionDataService:
                     },
                 )
 
-
-    async def create_org_emission(self, data: OrgEmission):
-        """
-        Creates an emission data record for an organization.
-
-        Args:
-            data (dict): The data to create the emission data record with.
-
-        Returns:
-            The created emission data record.
-        """
+    async def create_org_emission(self, data: Emission):
         iorg = await self.prisma.iorganization.find_first(
-            where={
-                "uid": data.get("uid")
-            }, include={
-                "sites": True
-            }
+            where={"uid": data.get("uid")}, include={"sites": True}
         )
         created_emissions = []
-        if iorg.sites and len(iorg.sites) > 0:
-            data['periodStartDt'] = datetime.strptime(str(data.get('periodStartDt')) + '-01-01', '%Y-%m-%d')
-            data['periodEndDt'] = data['periodStartDt'] + relativedelta(years=1)
-            total_area = reduce(lambda x, y: x + y, [site.manufacturingFacilityArea for site in iorg.sites])
-            for site in iorg.sites:
-                ratio = (site.manufacturingFacilityArea / total_area) if total_area > 0 else 0
-                emission = {}
-
-                emission["periodStartDt"] = data['periodStartDt']
-                emission["periodEndDt"] = data['periodEndDt']
-                emission["emissionTotal"] = data['emissionTotal'] * ratio
-                emission["emissionDirect"] = data.get('emissionDirect', 0) * ratio if data.get('emissionDirect', 0) else 0
-                emission["emissionIndirect"] = data.get('emissionIndirect', 0) * ratio if data.get('emissionDirect', 0) else 0
-                emission["siteUid"] = site.uid
-                emission["source"] = data['source']
-                emission["longitude"] = site.longitude
-                emission["latitude"] = site.latitude
-                emission["regionUid"] = site.addressRegionUid
-                emission["regionName"] = site.addressRegionName
-                emission['energyHeat'] = data.get('energyHeat', 0) * ratio if data.get('energyHeat', 0) else 0
-                emission['energyElectricity'] = data.get('energyElectricity', 0) * ratio if data.get('energyElectricity', 0) else 0
-                emission['energyFuel'] = data.get('energyFuel', 0) * ratio if data.get('energyFuel', 0) else 0
-                emission['energyTotal'] = data.get('energyTotal', 0) * ratio if data.get('energyTotal', 0) else 0
-                emission["periodLength"] = "1Y"
-                emission["pollutantId"] = "CO2eq"
-                created_emissions.append(await self.create(data=emission))
-                
-            
+        period_start_dt = datetime.strptime(str(data.get("year")) + "-01-01", "%Y-%m-%d")
+        period_end_dt = period_start_dt + relativedelta(years=1)
+        total_area = sum(
+            site.manufacturingFacilityArea for site in iorg.sites if site.manufacturingFacilityArea
+        ) if iorg.sites and len(iorg.sites) > 0 else 0
+        for site in iorg.sites:
+            ratio = (
+                site.manufacturingFacilityArea / total_area
+                if total_area > 0
+                else 0
+            )
+            emission = {
+                "periodStartDt": period_start_dt,
+                "periodEndDt": period_end_dt,
+                "emissionTotal": data["emissionTotal"] * ratio,
+                "emissionDirect": data.get("emissionScope1", 0) * ratio,
+                "emissionIndirect": data.get("emissionScope2", 0) * ratio,
+                "siteUid": site.uid,
+                "source": data["source"],
+                "longitude": site.longitude,
+                "latitude": site.latitude,
+                "regionUid": site.addressRegionUid,
+                "regionName": site.addressRegionName,
+                "energyHeat": data.get("energyHeat", 0) * ratio,
+                "energyElectricity": data.get("energyElectricity", 0) * ratio,
+                "energyFuel": data.get("energyFuel", 0) * ratio,
+                "energyTotal": data.get("energyTotal", 0) * ratio,
+                "periodLength": "1Y",
+                "pollutantId": "tCO2eq",
+            }
+            created_emissions.append(await self.create(data=emission))
+        await self.update_or_create(
+            data={
+                "emissionDirect": data.get("emissionScope1", 0),
+                "emissionIndirect": data.get("emissionScope2", 0),
+                "emissionTotal": data["emissionTotal"],
+                "periodStartDt": period_start_dt,
+                "periodEndDt": period_end_dt,
+                "uid": data["uid"],
+                "energyElectricity": data.get("energyElectricity", 0),
+                "energyHeat": data.get("energyHeat", 0),
+                "energyFuel": data.get("energyFuel", 0),
+                "energyTotal": data.get("energyTotal", 0),
+                "periodLength": "1Y",
+                "source": data["source"],
+                "pollutantId": "tCO2",
+            },
+            where={"uid": data["uid"]},
+        )
