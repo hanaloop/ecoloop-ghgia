@@ -136,3 +136,16 @@ async def calculate(request: Request):
     for year in range(from_date, to_date):
         await service.calculate_emissions(year=year)
 
+
+@router.get("/iemissiondata-sources/")
+async def get_sources():
+    sources = await service.fetch_many(distinct=["source"])
+    _sources = []
+    for source in sources:
+        _sources.append(source.source)
+    return _sources
+
+@router.post("/iemissiondata-org/")
+async def create_org_emission(request: Request):
+    body = await request.json()
+    return await service.create_org_emission(data=body)

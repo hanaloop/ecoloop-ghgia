@@ -158,6 +158,7 @@ model IOrganization {
 
   sites               IOrgSite[]
   financials          IFinancial[]
+  emissions          IEmissionData[]
 
   @@index([erefId])
   @@index([id])
@@ -343,6 +344,7 @@ model IEmissionData {
   sector              Sector?  @relation(fields: [sectorUid], references: [uid], onDelete: SetNull)
 
   organizationUid     String?  @db.VarChar
+  organization        IOrganization?    @relation(fields: [organizationUid], references: [uid], onDelete: SetNull)
   siteUid             String?  @db.VarChar
   site                IOrgSite? @relation(fields: [siteUid], references: [uid], onDelete: SetNull)
 
