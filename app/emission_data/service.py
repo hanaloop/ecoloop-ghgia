@@ -147,7 +147,7 @@ class IEmissionDataService:
         return await self.prisma.iemissiondata.find_many(where=where, include=include, distinct=distinct)
 
     async def fetch_one(
-        self, where: prisma.types.IEmissionDataWhereInput
+        self, where: prisma.types.IEmissionDataWhereInput, include=None
     ) -> prisma.models.IEmissionData | None:
         """
         Fetches a single record based on the given where clause.
@@ -158,7 +158,7 @@ class IEmissionDataService:
         Returns:
             An IEmissionData object that matches the given conditions or None if no record is found.
         """
-        return await self.prisma.iemissiondata.find_first(where=where)
+        return await self.prisma.iemissiondata.find_first(where=where, include=include)
 
     async def fetch_all(self) -> list[prisma.models.IEmissionData]:
         """
@@ -541,12 +541,13 @@ class IEmissionDataService:
                 "sites": True
             }
         )
+        created_emissions = []
         if iorg.sites and len(iorg.sites) > 0:
             data['periodStartDt'] = datetime.strptime(str(data.get('periodStartDt')) + '-01-01', '%Y-%m-%d')
             data['periodEndDt'] = data['periodStartDt'] + relativedelta(years=1)
             total_area = reduce(lambda x, y: x + y, [site.manufacturingFacilityArea for site in iorg.sites])
             for site in iorg.sites:
-                ratio = site.manufacturingFacilityArea / total_area
+                ratio = (site.manufacturingFacilityArea / total_area) if total_area > 0 else 0
                 emission = {}
 
                 emission["periodStartDt"] = data['periodStartDt']
@@ -566,6 +567,6 @@ class IEmissionDataService:
                 emission['energyTotal'] = data.get('energyTotal', 0) * ratio if data.get('energyTotal', 0) else 0
                 emission["periodLength"] = "1Y"
                 emission["pollutantId"] = "CO2eq"
-                await self.create(data=emission)
+                created_emissions.append(await self.create(data=emission))
                 
             
