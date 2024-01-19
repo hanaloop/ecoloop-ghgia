@@ -4,7 +4,7 @@ from app.importers.importer_emission_data import EmissionDataImporter
 from app.foundation.arg_parse import parse_args
 
 @parse_args
-async def main(path: str = "../.seed_data/emission_data.gir4.import.xls"):
+async def main(path: str):
     db = get_connection()
     await db.connect()
     importer = EmissionDataImporter()

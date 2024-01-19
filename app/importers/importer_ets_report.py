@@ -39,8 +39,11 @@ class EtsReportImporter:
         newDf = df.rename(columns=ets_report_col_map)
         newDf = newDf[newDf.columns.intersection(ets_report_col_map.values())] ##TODO: Check if they exist first
         emissions_df = newDf.loc[:,['year', 'emissionTotal', 'energyTotal'] ]
-        iorganization_df = newDf.loc[:,['sectorMain', 'sectorSub', 'legalName', 'sizeCategory']]
+        iorganization_df = newDf.loc[:,['sectorMain', 'sectorSub', 'legalName', 'sizeCategory', 'verificationBody', 'regulationCriteria', 'notes']]
         applicable_regulations = ['ETS']
+        ##We have to use list comprehension to create a list inside a cell otherwise pandas just assigns a simple string to each row
+        ##https://stackoverflow.com/questions/49725203/adding-the-same-list-to-each-row-in-a-pandas-dataframe-in-a-new-column
+
         iorganization_df["applicableRegulations"] = [applicable_regulations for _ in range(len(iorganization_df))]
         emissions_df['source'] = 'orig:gir-ets'
         emissions_df['periodStartDt'] = emissions_df['year'].apply(lambda x: parse_to_date(str(x) + '-01-01', '%Y-%m-%d'))

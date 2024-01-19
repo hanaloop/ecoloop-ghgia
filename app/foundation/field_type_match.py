@@ -103,6 +103,7 @@ def cast_dict_to_types(data: dict, sorted_annotations: dict) -> dict:
     Returns:
         dict: The updated `data` dictionary. NOTE:This one works much better than the above, use this one if possible.
     """
+    ##TODO: Move intersection and annotations to here
     for annotation in sorted_annotations.keys():
         for key, value in list(data.items()):
             if key not in sorted_annotations[annotation]:

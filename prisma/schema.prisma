@@ -46,6 +46,7 @@ model IOrganization {
   /// 할당대상여부(Y/N)
   isSubjectRegulation   Boolean?
   applicableRegulations String[] // ETS, Target
+  regulationCriteria    String?  @db.VarChar
 
   latitude            Float?
   longitude           Float?
@@ -114,10 +115,11 @@ model IOrganization {
   /// 업종
   sectorUid           String?  @db.VarChar(40)
   sector              Sector?  @relation(fields: [sectorUid], references: [uid])
-  industry            String?  @db.VarChar
+  plannedIndustries   String?  @db.VarChar
   sectorSub           String?  @db.VarChar
   sectorMain          String?  @db.VarChar
 
+  verificationBody    String?  @db.VarChar
   specialties         String[] // tags of words: 
 
   /// 대표자
@@ -354,7 +356,8 @@ model IEmissionData {
   energyHeat          Float?
   energyTotal         Float?
   emissionDirect      Float?  //Scope 1
-  emissionIndirect    Float?  //Scope 2  emissionOthers      Json?    @default("{}")
+  emissionIndirect    Float?  //Scope 2
+  emissionOthers      Json?    @default("{}")
   emissionTotal       Float
 
   // TODO: add pollutantId in 
