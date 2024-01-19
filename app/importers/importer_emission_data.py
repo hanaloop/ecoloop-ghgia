@@ -47,6 +47,7 @@ class EmissionDataImporter:
         else :
             df_data = await adapter.prepare(path=filepath, data_source=filepath)
         data_format = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
+        # df_data = df_data[df_data.columns.intersection(prisma.models.IEmissionData.model_fields.keys())]
         for row in tqdm(df_data.to_dict(orient="records"), total=len(df_data)):
             new_row = cast_dict_to_types(row, data_format)
             # new_row = {key: value for key, value in row.items() if value is not None}

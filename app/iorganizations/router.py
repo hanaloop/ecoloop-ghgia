@@ -4,7 +4,6 @@ import prisma
 from app.foundation.adapter_prisma import PrismaAdapter
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 from app.iorganizations.service import IOrganizationService
-from app.iorgsites.service import IOrgSiteService
 
 service = IOrganizationService()
 router = APIRouter(

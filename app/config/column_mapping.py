@@ -8,7 +8,6 @@ iorgsite_map = {
     "대표업종차수": "sectorIds",
     "대표업종번호": "sectorIdMain",
     "업종번호": "sectorIds",
-    "업종명": "sectorNames",
     "시도": "addressRegionName",
     "시군구": "addressSubRegion",
     "설립구분": "establishmentType",
@@ -48,7 +47,6 @@ iorgsite_map = {
     "공장주소_지번": "landAddress",
     "시도명": "addressRegionName",
     "시군구명" : "addressSubRegion",
-    "보유구분": "propertyOwnership",
     "남자종업원": "numEployeesMale",
     "여자종업원": "numEployeesFemale",
     "외국인남자종업원": "numEployeesForeignMale",
@@ -104,7 +102,7 @@ financial_map = {
 emission_data_cols = [
     "uncertainty", "categoryName", "categoryUid", "countryId", "regionName", 
     "regionUid", "sectorName", "sectorUid", "periodLength", "periodStartDt", 
-    "periodEndDt", "pollutantId", "emissionDirect", "emissionElec", "emissionSteam", 
+    "periodEndDt", "pollutantId", "emissionDirect", 
     "emissionOthers", "emissionTotal"
 ]
 
@@ -383,3 +381,20 @@ emission_intensity = {
         "per_sqrmt": 0.00001114148534
     }
 }
+
+ets_report_col_map = {
+    "업체명": "legalName",
+    "대상년도": "year",
+    "지정업종": "regulationCriteria",
+    "지정구분" : "sectorSub",
+    "부문": "sectorMain",
+    "계획업종": "plannedIndustries",
+    "온실가스배출량(tCO2-eq)": "emissionTotal",
+    "에너지 사용량(TJ)": "energyTotal",
+    "중소기업여부": "sizeCategory",
+    "중소기업 여부": "sizeCategory",
+    "검증수행기관": "verificationBody",
+    "비고": "notes"
+
+}
+

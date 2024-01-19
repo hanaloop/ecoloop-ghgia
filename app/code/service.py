@@ -3,7 +3,6 @@ from typing_extensions import Buffer
 import prisma
 from app.database import get_connection
 from app.utils.file import FileUtils
-from tqdm import tqdm
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 
 class CodeService:

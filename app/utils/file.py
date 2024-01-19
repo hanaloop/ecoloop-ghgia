@@ -4,35 +4,34 @@ import openpyxl
 import pandas as pd
 
 class FileUtils:
-    async def read_to_pd(self, file_type: str, file: Buffer = None, path: str = None, sheet = None) -> pd.DataFrame:
+    async def read_to_pd(self, file_type: str, file: Buffer = None, path: str = None, sheet = None, starting_row = 0, starting_col = 0, last_row = None, last_col = None) -> pd.DataFrame:
         """
         Reads a file into a pandas dataframe. Generic implementation, finds file type automatically.
         """
-        ##TODO: Chunking for large files
-        print(file_type)
         if (not file and not path) or (file and path):
             raise Exception("Either file or path must be provided")
+        
         file = file or path
         extension = file_type.split(".")[-1]
-        match extension:
-            case "csv":
-                return await self.read_csv_to_pd(file)
-            case "xlsx":
-                return await self.read_excel_to_pd(file, sheet)
-            case "xls":
-                return await self.read_excel_to_pd(file, sheet)
-            case "xml":
-                return await self.read_xml_to_pd(file)
-            case _:
-                raise Exception(f"Unsupported file type: {extension}")
+        
+        if extension == "csv":
+            return await self.read_csv_to_pd(file)
+        elif extension in ["xlsx", "xls"]:
+            return await self.read_excel_to_pd(file, sheet, starting_row, starting_col, last_row, last_col)
+        elif extension == "xml":
+            return await self.read_xml_to_pd(file)
+        else:
+            raise Exception(f"Unsupported file type: {extension}")
 
 
-    async def read_excel_to_pd(self, file: Buffer | str, sheet = None) -> pd.DataFrame: ##TODO: Surely this can be simplified
+    async def read_excel_to_pd(self, file: Buffer | str, sheet = None, starting_row = 0, starting_col = 0, last_row = None, last_col = None) -> pd.DataFrame: ##TODO: Surely this can be simplified
         if sheet is None:
-            df = pd.read_excel(file).fillna("")
+            starting_row, last_row, cols_to_read, nrows = self.calc_read_range(starting_row, starting_col, last_row, last_col)
+            df = pd.read_excel(file, skiprows=starting_row, nrows=nrows, usecols=cols_to_read).fillna("")
             df.replace("",None,inplace=True)
             return df
-        df = pd.read_excel(file, sheet_name=sheet).fillna("")
+        starting_row, last_row, cols_to_read, nrows = self.calc_read_range(starting_row, starting_col, last_row, last_col)
+        df = pd.read_excel(file, sheet_name=sheet, skiprows=starting_row, nrows=nrows, usecols=cols_to_read).fillna("")
         df.replace("",None,inplace=True)
         return df
 
@@ -99,3 +98,16 @@ class FileUtils:
         if not count_header:
             count -= 1
         return count
+
+    def calc_read_range(self, starting_row = 0, starting_col = 0, last_row = None, last_col = None)->tuple:
+        if starting_col and last_col and starting_col > last_col:
+            raise Exception("Starting column cannot be greater than last column")
+        if starting_col and not last_col or not starting_col and last_col:
+            raise Exception("Both starting and last column must be provided")
+        if not starting_row and last_row:
+            raise Exception("Starting row must be provided if last row is provided")
+        col_range = range(starting_col, last_col) if last_col and starting_col else None
+        nrows = last_row - starting_row + 1 if last_row else None
+        return starting_row, last_row, col_range, nrows
+
+        
