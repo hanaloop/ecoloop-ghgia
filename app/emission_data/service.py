@@ -268,7 +268,7 @@ class IEmissionDataService:
     ):
         gir4_adp = GirCategoryAdapter()
         files = FileUtils()
-        if "gir4" in data_source.lower():
+        if "orig:gir-db4" in data_source.lower():
             df = await gir4_adp.prepare(data_source, buffer, data_source)
         for row in tqdm(df.to_dict(orient="records"), total=len(df)):
             await self.create(data=row)
@@ -303,7 +303,7 @@ class IEmissionDataService:
             year_end = "2020-01-01T00:00:00.000Z"
         gir_4_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:gir4",
+                "source": "calc:",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
@@ -314,7 +314,7 @@ class IEmissionDataService:
 
         gir_1_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:gir1",
+                "source": "calc:gir-db1",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
@@ -466,7 +466,7 @@ class IEmissionDataService:
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
                         "pollutantId": "CO2",
-                        "source": "gir4",
+                        "source":"orig:gir-db4",
                     }
                 )
             else:
@@ -480,7 +480,7 @@ class IEmissionDataService:
                     where={
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
-                        "source": "gir1",
+                        "source": "orig:gir-db1",
                     },
                 )
                 category_name = relation.categoryName

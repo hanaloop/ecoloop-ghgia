@@ -12,8 +12,8 @@ from app.database import  get_connection
 from app.code import router as code
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.NOTSET)
+# logger.addHandler(logging.StreamHandler())
 
 
 client = get_connection()
@@ -36,7 +36,7 @@ app.include_router(region.router)
 app.include_router(code.router)
 
 api_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.NOTSET)
 
 
 
