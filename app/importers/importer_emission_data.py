@@ -8,6 +8,7 @@ from app.emission_data.service import IEmissionDataService
 from app.foundation.field_type_match import cast_dict_to_types, model_fields_into_type_map
 from app.code.service import CodeService
 from app.config.column_mapping import ipcc_to_gir_code
+from typing import Dict
 
 service = IEmissionDataService()
 adapter_gir4 = GirCategoryAdapter()

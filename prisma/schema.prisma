@@ -360,7 +360,6 @@ model IEmissionData {
   energyTotal         Float?
   emissionDirect      Float?  //Scope 1
   emissionIndirect    Float?  //Scope 2
-  emissionOthers      Json?    @default("{}")
   emissionTotal       Float
 
   // TODO: add pollutantId in 
