@@ -49,12 +49,9 @@ class EmissionDataImporter:
             df_data = await files.read_to_pd(path=filepath, file_type=file_type)
         else :
             df_data = await adapter.prepare(path=filepath, data_source=filepath)
-        data_format = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
-        # df_data = df_data[df_data.columns.intersection(prisma.models.IEmissionData.model_fields.keys())]
         for row in tqdm(df_data.to_dict(orient="records"), total=len(df_data)):
-            cast_dict_to_types(row, data_format)
             # new_row = {key: value for key, value in row.items() if value is not None}
-            if "regionUid" in row:
+            if "regionUid" in row and row["regionUid"] is not None:
                 region = await self.region_service.fetch_one(where={"uid": row["regionUid"]})
                 row['latitude'] = region.latitude
                 row['longitude'] = region.longitude
@@ -62,6 +59,8 @@ class EmissionDataImporter:
                 category = await self.code_service.fetch_one(where={"code": row["categoryName"]})
                 row['categoryUid'] = category.uid
             try:
+                data_format = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)
+                row = cast_dict_to_types(row, data_format)
                 await service.update_or_create(data=row, where={"source": row["source"], "categoryName": row["categoryName"], "periodStartDt": row["periodStartDt"], "periodEndDt": row["periodEndDt"], "pollutantId": row["pollutantId"], "regionName": row["regionName"]})
             except Exception as e:
                 print(f'Inserting row {row} failed. Perhaps it already exists. {e}')   
