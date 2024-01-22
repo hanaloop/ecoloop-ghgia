@@ -354,12 +354,12 @@ model IEmissionData {
 
   pollutantId         String?  @db.VarChar /// pollutant: co2eq, co2, ch4, n2o, nox, sox, etc.
   energyElectricity   Float?
+  emissionOthers       Json?    @default("{}")
   energyFuel          Float?
   energyHeat          Float?
   energyTotal         Float?
   emissionDirect      Float?  //Scope 1
   emissionIndirect    Float?  //Scope 2
-  emissionOthers      Json?    @default("{}")
   emissionTotal       Float
 
   // TODO: add pollutantId in 

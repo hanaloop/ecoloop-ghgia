@@ -10,5 +10,5 @@ def create_partial_gir1(**kwargs) -> IEmissionData:
     total_emissions_gir1.periodStartDt = kwargs.get("date_from")
     total_emissions_gir1.periodEndDt = kwargs.get("date_to")
     total_emissions_gir1.periodLength = "1Y"
-    total_emissions_gir1.source = "gir1"
+    total_emissions_gir1.source = "orig:gir-db1"
     return total_emissions_gir1

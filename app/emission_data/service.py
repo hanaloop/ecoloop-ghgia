@@ -1,5 +1,7 @@
+from typing import Dict
 import datetime
 from typing import Optional
+import logging
 from typing_extensions import Buffer
 import pandas as pd
 import prisma
@@ -35,6 +37,7 @@ class IEmissionDataService:
     def __init__(self) -> None:
         self.prisma = get_connection()
         self.rel_service = ISiteCategoryRelService()
+        self.logger = logging.getLogger(__name__)
 
     async def delete_all(self):
         """
@@ -161,16 +164,7 @@ class IEmissionDataService:
         Returns:
             An IEmissionData object that matches the given conditions or None if no record is found.
         """
-        return await self.prisma.iemissiondata.find_first(where=where, include=include)
-
-    async def fetch_all(self) -> list[prisma.models.IEmissionData]:
-        """
-        Fetches all data from the OrgSite table.
-
-        Returns:
-            A list of IEmissionData objects representing all records in the OrgSite table.
-        """
-        return await self.prisma.iemissiondata.find_many()
+        return await self.prisma.iemissiondata.find_first(where=where)
 
     async def create_many(self, data: prisma.types.IEmissionDataCreateInput) -> None:
         """
@@ -259,14 +253,14 @@ class IEmissionDataService:
     async def fetch_all_paginated(self):
         pass
 
-    async def fetch_count(self) -> int:
+    async def fetch_count(self, where: prisma.types.IEmissionDataWhereInput = None) -> int:
         """
         Fetches the count of the IEmissionData table.
 
         Returns:
             int: The count of the IEmissionData table.
         """
-        return await self.prisma.iemissiondata.count()
+        return await self.prisma.iemissiondata.count(where=where)
 
     # Business logic
 
@@ -275,7 +269,7 @@ class IEmissionDataService:
     ):
         gir4_adp = GirCategoryAdapter()
         files = FileUtils()
-        if "gir4" in data_source.lower():
+        if "orig:gir-db4" in data_source.lower():
             df = await gir4_adp.prepare(data_source, buffer, data_source)
         for row in tqdm(df.to_dict(orient="records"), total=len(df)):
             await self.create(data=row)
@@ -297,27 +291,37 @@ class IEmissionDataService:
         self,
         year_start: str,
         year_end: str,
+        category: Dict[str, Dict[str, str]]  = None,
     ):
+        if category is None or not category:
+            category = {}
+            category_gir_1 = {"categoryName": {"in": list(ipcc_to_gir_code.keys())}}
+        else:
+            category_gir_1 = category
         if year_start is None:
             year_start = "2019-01-01T00:00:00.000Z"
         if year_end is None:
             year_end = "2020-01-01T00:00:00.000Z"
         gir_4_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:gir4",
+                "source": "calc:",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category
             },
             include={"region": True},
         )
 
         gir_1_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:gir1",
+                "source": "calc:gir-db1",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category_gir_1
+                
+
             },
             include={"region": True},
         )
@@ -325,9 +329,11 @@ class IEmissionDataService:
         gir_1 = await self.prisma.iemissiondata.group_by(
             where={
                 "source": "gir1",
-                "categoryName": {"in": list(ipcc_to_gir_code.values())},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
+                **category_gir_1,
+
+
             },
             by=[
                 "categoryName",
@@ -335,6 +341,7 @@ class IEmissionDataService:
                 "source",
                 "latitude",
                 "longitude",
+                
             ],
             sum={"emissionTotal": True},
         )
@@ -460,15 +467,13 @@ class IEmissionDataService:
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
                         "pollutantId": "CO2",
-                        "source": "gir4",
+                        "source":"orig:gir-db4",
                     }
                 )
             else:
-                category_name = ipcc_to_gir_code.get(
-                    get_second_level_category(relation.categoryName)
-                )
+                category_name = relation.categoryName
                 total_emission = await self.group_by(
-                    by=["categoryName", "pollutantId"],
+                    by=["categoryName", "pollutantId", "categoryUid"],
                     sum={"emissionTotal": True},
                     having={
                         "categoryName": category_name,
@@ -476,7 +481,7 @@ class IEmissionDataService:
                     where={
                         "periodStartDt": {"gte": date_from},
                         "periodEndDt": {"lte": date_to},
-                        "source": "gir1",
+                        "source": "orig:gir-db1",
                     },
                 )
                 category_name = relation.categoryName
@@ -514,6 +519,7 @@ class IEmissionDataService:
                         "longitude": relation.site.longitude,
                         "latitude": relation.site.latitude,
                         "categoryRelUid": relation.uid,
+                        "categoryUid": total_emission.categoryUid,
                     },
                     where={
                         "categoryName": relation.categoryName,

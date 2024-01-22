@@ -21,7 +21,7 @@ def test_create_partial_gir1():
     assert result.periodStartDt == datetime.datetime(2020, 1, 1)
     assert result.periodEndDt == datetime.datetime(2020, 12, 31)
     assert result.periodLength == "1Y"
-    assert result.source == "gir1"
+    assert result.source == "orig:gir-db1"
 
 if __name__ == "__main__":
     pytest.main()

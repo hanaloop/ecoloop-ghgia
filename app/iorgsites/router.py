@@ -8,41 +8,41 @@ from app.foundation.field_type_match import cast_dict_to_types, model_fields_int
 
 service = IOrgSiteService()
 adapter = PrismaAdapter()
+api_logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api",
     tags=["iorgsites"],
 )
-logger = logging.getLogger("api.iorgsites")
 
 
-@router.get("/iorgsites/count")
+@router.get("/iorgsites-count")
 async def count():
     return await service.fetch_count()
 
 
 
-@router.get("/iorgsites/group")
+@router.get("/iorgsites-group")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
     )
 
-@router.post("/iorgsites/upload")
+@router.post("/iorgsites-upload")
 async def upload(file: UploadFile):
     return await service.upload_iorgsites(buffer=file.file)
 
 
-@router.put("/iorgsites/addresses/update")
+@router.put("/iorgsites-address-all/")
 async def update_addresses():
     return await service.populate_addresses()
 
 
-@router.put("/iorgsites/{uid}/address")
+@router.put("/iorgsites-address/{uid}/")
 async def update_single_address(uid: str):
     return await service.populate_single_address(uid=uid)
 
-@router.get("/iorgsites/")
-async def search(request: Request):
+@router.get("/iorgsite/")
+async def get(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
     return await service.fetch_paged(
@@ -66,7 +66,7 @@ async def get_paged(request: Request):
         skip=page_size * page_num,
         include=include
     )  ##TODO: Group these to a single query
-    count = await service.fetch_count()
+    count = await service.fetch_count(where=query_args)
     response = adapter.to_pageable_response(
         query=query_params, response=content, count=count
     )
