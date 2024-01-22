@@ -509,7 +509,7 @@ class IEmissionDataService:
                         "periodEndDt": total_emission.periodEndDt,
                         "emissionTotal": emission,
                         "periodLength": total_emission.periodLength,
-                        "source": "calc:" + total_emission.source,
+                        "source": "calc:" + total_emission.source.split(":")[1] if total_emission.source is not None else None, ##TODO:fix this
                         "regionUid": relation.site.addressRegionUid,
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,
