@@ -650,9 +650,10 @@ class IOrgSiteService:
             await self.prisma.iorganization.update(where={"uid": deleted_site.organizationUid}, data={"linkedSitesNumber": site_count})
             return deleted_site
 
-    async def update_site(self, orgUid: str, data: prisma.models.IOrgSite) -> None:
+    async def update_site(self, orgUid: str | None, data: prisma.models.IOrgSite) -> prisma.models.IOrgSite:
         updated_site = await self.prisma.iorgsite.update(where={"uid": data.get("uid")}, data=data)
-        if updated_site:
-            site_count = await self.prisma.iorgsite.count(where={"organizationUid": orgUid})
-            await self.prisma.iorganization.update(where={"uid": orgUid}, data={"linkedSitesNumber": site_count})
-            return updated_site
+        if orgUid is None:
+            orgUid = updated_site.organizationUid
+        site_count = await self.prisma.iorgsite.count(where={"organizationUid": orgUid})
+        await self.prisma.iorganization.update(where={"uid": orgUid}, data={"linkedSitesNumber": site_count})
+        return updated_site

@@ -98,7 +98,7 @@ async def delete(uid):
     return await service.delete_site(uid=uid)
 
 @router.put("/iorgsite/{orgUid}/")
-async def update_site_organization(request: Request, orgUid: str):
+async def update_site_organization(request: Request, orgUid: str = None):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)
