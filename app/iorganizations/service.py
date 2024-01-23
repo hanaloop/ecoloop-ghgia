@@ -293,7 +293,7 @@ class IOrganizationService:
             company_name = [x for x in company_name]
             company_name = "%".join(company_name)
             sites = await self.prisma.query_raw(
-                query=f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%';""",
+                query=f"""SELECT * FROM "IOrgSite" WHERE "companyName" like '%{company_name}%' ORDER BY "companyName" ;""",
             )
         if len(sites) == 0:
             sites = []

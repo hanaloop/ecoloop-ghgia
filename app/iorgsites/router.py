@@ -85,9 +85,6 @@ async def create(request: Request):
         return await service.create(data=body_as_series.to_dict())
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
-        
-       
-
 
 @router.put("/iorgsites/{uid}")
 async def update(request: Request, uid: str):
@@ -98,5 +95,12 @@ async def update(request: Request, uid: str):
 
 @router.delete("/iorgsites/{uid}")
 async def delete(uid):
-    return await service.delete(where={"uid": uid})
+    return await service.delete_site(uid=uid)
+
+@router.put("/iorgsite/{orgUid}/")
+async def update_site_organization(request: Request, orgUid: str):
+    body = await request.json()
+    field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+    body = cast_dict_to_types(body, field_types)
+    return await service.update_site(orgUid=orgUid, data=body)
 
