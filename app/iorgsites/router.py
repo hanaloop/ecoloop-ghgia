@@ -45,8 +45,9 @@ async def update_single_address(uid: str):
 async def get(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
+    include = query_params.get("_include", None)
     return await service.fetch_paged(
-        where=query_args, take=query_args.take, skip=query_args.take * query_args.page
+        where=query_args, take=query_args.take, skip=query_args.take * query_args.page, include=include
     )
 
 @router.get("/iorgsites/{uid}")
@@ -59,7 +60,11 @@ async def get_paged(request: Request):
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
-    include = query_params['include'] if 'include' in query_params else None
+    include = (
+        adapter.to_include_exclude_args(query_params["_include"])
+        if "_include" in query_params
+        else None
+    )    
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
