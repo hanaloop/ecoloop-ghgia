@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
 import logging
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile
+from fastapi.responses import StreamingResponse
+from pandas import ExcelWriter
 import prisma
 from app.emission_data.service import IEmissionDataService
 from app.foundation.adapter_prisma import PrismaAdapter
@@ -8,7 +11,7 @@ from app.foundation.field_type_match import (
     model_fields_into_type_map,
 )
 from app.utils.data_types import parse_to_date
-
+import pandas as pd
 
 service = IEmissionDataService()
 
@@ -168,3 +171,14 @@ async def get_regions():
         if region.regionName is not None and region.regionName != "":
             _regions.append(region.regionName)
     return _regions
+
+@router.get("/iemissiondata-asgroup-export/", response_class=Response)
+async def export_as_group(request: Request):
+    query_params = request.query_params._dict
+    query_args = adapter.to_query_args(query=query_params)
+    year_start = query_params["_year_from"] if "_year_from" in query_params else None
+    year_end = query_params["_year_to"] if "_year_to" in query_params else None
+    if year_start is None or year_end is None:
+        raise HTTPException(status_code=400, detail="year_start and year_end are required")
+    _response = await service.export_region_groupped( year_start=year_start, year_end=year_end, category=query_args)
+    return Response(content=_response, media_type="application/vnd.ms-excel", headers={"Content-Disposition": "attachment; filename=asgroup.csv"})

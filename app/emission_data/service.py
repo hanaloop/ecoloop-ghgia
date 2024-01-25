@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Dict
 import datetime
 from typing import Optional
@@ -587,3 +588,32 @@ class IEmissionDataService:
             },
             where={"organizationUid": data["uid"], "periodStartDt": period_start_dt, "periodEndDt": period_end_dt, "source": data["source"]},
         )
+
+    async def export_region_groupped(       
+        self,
+        year_start: str,
+        year_end: str,
+        category: Dict[str, Dict[str, str]]  = None,
+    ) -> BytesIO:
+        df = pd.DataFrame()
+        data = await self.fetch_grouped_by_region( year_start=year_start, year_end=year_end, category=category)
+        if len(data) == 0:
+            return "No data to export"
+        df = pd.DataFrame(data.get("gir1"))
+        df.index = df.apply(lambda x: str(round(x['latitude'], 2)) + " " + str(round(x['longitude'], 2)), axis=1)
+        df.drop(columns=['longitude', 'latitude', 'norm'], inplace=True)
+        df.rename(columns={'emissionTotal': 'gir1'}, inplace=True)
+        for item in data.keys():
+            if item == "gir1":
+                continue
+            _df = pd.DataFrame(data.get(item))
+            _df.index = _df.apply(lambda x: str(round(x['latitude'], 2)) + " " + str(round(x['longitude'], 2)), axis=1)
+            _df.drop(columns=['regionUid', 'longitude', 'latitude', 'norm', 'regionName'], inplace=True)
+            _df.rename(columns={'emissionTotal': item}, inplace=True)
+            df = _df.join(df, how='outer')
+        df.index = df['regionName']
+        df.drop(columns=['regionName'], inplace=True)
+        df.columns = pd.MultiIndex.from_tuples([('emissions tCO2eq', 'gir1Calc'),('emissions tCO2eq', 'gir4Calc'),('emissions tCO2eq', 'gir1')])
+        df.index.name = 'region name'
+        csv_str = df.to_csv()
+        return csv_str    
