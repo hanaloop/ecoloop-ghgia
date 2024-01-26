@@ -77,4 +77,4 @@ class PrismaAdapter:
         if not sort:
             return
         _sort_list = sort.split(",")
-        return { value.split(':')[0]: value.split(':')[1] for value in _sort_list }
+        return [{value.split(':')[0]: value.split(':')[1] } for value in _sort_list] 
