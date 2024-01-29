@@ -45,8 +45,9 @@ async def update_single_address(uid: str):
 async def get(request: Request):
     query_params = request.query_params._dict
     query_args = adapter.to_query_args(query=query_params)
+    include = query_params.get("_include", None)
     return await service.fetch_paged(
-        where=query_args, take=query_args.take, skip=query_args.take * query_args.page
+        where=query_args, take=query_args.take, skip=query_args.take * query_args.page, include=include
     )
 
 @router.get("/iorgsites/{uid}")
@@ -59,9 +60,13 @@ async def get_paged(request: Request):
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
+    include = (
+        adapter.to_include_exclude_args(query_params["_include"])
+        if "_include" in query_params
+        else None
+    )    
     _sort = query_params.get("_sort", None)
     sort = adapter.to_sort_object(_sort)
-    include = query_params['include'] if 'include' in query_params else None
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
@@ -88,9 +93,6 @@ async def create(request: Request):
         return await service.create(data=body_as_series.to_dict())
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
-        
-       
-
 
 @router.put("/iorgsites/{uid}")
 async def update(request: Request, uid: str):
@@ -101,5 +103,12 @@ async def update(request: Request, uid: str):
 
 @router.delete("/iorgsites/{uid}")
 async def delete(uid):
-    return await service.delete(where={"uid": uid})
+    return await service.delete_site(uid=uid)
+
+@router.put("/iorgsite/{orgUid}/")
+async def update_site_organization(request: Request, orgUid: str = None):
+    body = await request.json()
+    field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+    body = cast_dict_to_types(body, field_types)
+    return await service.update_site(orgUid=orgUid, data=body)
 

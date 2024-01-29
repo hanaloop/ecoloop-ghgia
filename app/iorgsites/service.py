@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import logging
 import os
-from typing import AsyncIterator
+from typing import AsyncIterator, Tuple
 from typing_extensions import Buffer
 import hashlib
 import numpy as np
@@ -643,3 +643,18 @@ class IOrgSiteService:
             await self.update_relation_single(site=site)
         except Exception as e:
             return e
+
+    async def delete_site(self, uid: str) -> Tuple[int, prisma.models.IOrgSite]:
+        deleted_site = await self.prisma.iorgsite.delete(where={"uid": uid},include={"organization": True})
+        if deleted_site:
+            site_count = await self.prisma.iorgsite.count(where={"organizationUid": deleted_site.organizationUid})
+            await self.prisma.iorganization.update(where={"uid": deleted_site.organizationUid}, data={"linkedSitesNumber": site_count})
+            return deleted_site
+
+    async def update_site(self, orgUid: str | None, data: prisma.models.IOrgSite) -> prisma.models.IOrgSite:
+        updated_site = await self.prisma.iorgsite.update(where={"uid": data.get("uid")}, data=data)
+        if orgUid is None:
+            orgUid = updated_site.organizationUid
+        site_count = await self.prisma.iorgsite.count(where={"organizationUid": orgUid})
+        await self.prisma.iorganization.update(where={"uid": orgUid}, data={"linkedSitesNumber": site_count})
+        return updated_site
