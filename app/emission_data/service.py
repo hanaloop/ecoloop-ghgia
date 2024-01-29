@@ -484,6 +484,8 @@ class IEmissionDataService:
                     },
                 )
                 category_name = relation.categoryName
+                if total_emission is None or len(total_emission) == 0:
+                    continue
                 total_emission = total_emission[0]
                 total_emission["emissionTotal"] = (
                     total_emission["_sum"]["emissionTotal"] / 1000
