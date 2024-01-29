@@ -65,11 +65,14 @@ async def get_paged(request: Request):
         if "_include" in query_params
         else None
     )    
+    _sort = query_params.get("_sort", None)
+    sort = adapter.to_sort_object(_sort)
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
-        include=include
+        include=include,
+        order=sort
     )  ##TODO: Group these to a single query
     count = await service.fetch_count(where=query_args)
     response = adapter.to_pageable_response(

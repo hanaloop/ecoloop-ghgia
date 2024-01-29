@@ -2,6 +2,8 @@ from typing import Optional
 from fastapi import Request
 from pydantic import BaseModel
 
+from app.utils.string import string_to_dict
+
 
 class PageableResponse(BaseModel):
     number: Optional[int]
@@ -23,13 +25,18 @@ class PrismaAdapter:
         for key, prop in query.items():
             if key and key.startswith("_"):
                 continue
-            if len(key.split(":")) > 1:
+            if prop == "":
+                prop = None
+            if len(key.split(":")) == 2:
                 field, operator = key.split(":")
                 if prop and len(prop.split(",")) > 1 or operator == "in":
                     operands[field] = {operator: prop.split(",")}
                 elif len(key.split(":")) > 1:
                     operands[field] = {key.split(":")[1]: prop}
-            # elif:
+            elif len(key.split(":")) > 2:
+                new_key = ":".join([key, prop])
+                joint_dict = string_to_dict(new_key, ":")
+                operands.update(joint_dict)
             else:
                 operands[key] = prop
 
@@ -72,3 +79,9 @@ class PrismaAdapter:
             except:
                 raise ValueError(f"Cannot convert {arg} to list")
         return {key: True for key in arg}
+
+    def to_sort_object(self, sort: str):
+        if not sort:
+            return
+        _sort_list = sort.split(",")
+        return [{value.split(':')[0]: value.split(':')[1] } for value in _sort_list] 
