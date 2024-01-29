@@ -105,7 +105,7 @@ class GirCategoryAdapter:
             temp_df["pollutantId"] = sheet_name  # Name of the first sheet
             temp_df["periodStartDt"] = datetime.datetime(int(col), 1, 1)  # January of the year
             temp_df["periodEndDt"] = datetime.datetime(int(col), 12, 31)  # December of the year
-            temp_df["source"] = "gir4"
+            temp_df["source"] = "orig:gir-db4"
             temp_df["periodLength"] = "1Y"
             emission_data_df = pd.concat([emission_data_df, temp_df], ignore_index=True)
         non_float_pattern = r'^(?!-?\d*\.\d*$).*$'

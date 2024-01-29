@@ -1,6 +1,5 @@
 from io import BytesIO
 from typing import Dict
-import datetime
 from typing import Optional
 import logging
 from typing_extensions import Buffer
@@ -19,7 +18,6 @@ from app.utils.string import get_second_level_category
 from app.emission_data.models.partial_emission_data import create_partial_gir1
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-
 
 class Emission:
     emissionYear: int
@@ -305,7 +303,7 @@ class IEmissionDataService:
             year_end = "2020-01-01T00:00:00.000Z"
         gir_4_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:",
+                "source": "calc:orig:gir-db4",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
@@ -316,7 +314,7 @@ class IEmissionDataService:
 
         gir_1_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:gir-db1",
+                "source": "calc:orig:gir-db1",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
@@ -329,7 +327,7 @@ class IEmissionDataService:
 
         gir_1 = await self.prisma.iemissiondata.group_by(
             where={
-                "source": "gir1",
+                "source": "orig:gir-db1",
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
                 **category_gir_1,
@@ -438,8 +436,8 @@ class IEmissionDataService:
             None: This function does not return anything.
         """
 
-        date_from = datetime.datetime(year, 1, 1)
-        date_to = datetime.datetime(year, 12, 31)
+        date_from = datetime(year, 1, 1)
+        date_to = datetime(year, 12, 31)
         relations = await self.rel_service.fetch_many(
             where={"site": {"is": {"operationStartDt": {"lte": date_from}}}},
             include={"site": True},
@@ -512,7 +510,7 @@ class IEmissionDataService:
                         "periodEndDt": total_emission.periodEndDt,
                         "emissionTotal": emission,
                         "periodLength": total_emission.periodLength,
-                        "source": "calc:" + total_emission.source,
+                        "source": "calc:" + total_emission.source.split(":")[1] if total_emission.source is not None else None, ##TODO:fix this
                         "regionUid": relation.site.addressRegionUid,
                         "siteUid": relation.siteUid,
                         "pollutantId": total_emission.pollutantId,

@@ -27,7 +27,7 @@ from app.config.column_mapping import address_dict
 from app.iorgsites.adapters.adapter_address import fix_address_string
 from app.utils.string import get_coords_from_detail, get_regions_as_tuple
 from app.utils.data_types import parse_to_date
-
+from app.emission_data.service import IEmissionDataService
 
 class IOrgSiteService:
     def __init__(self):
@@ -35,6 +35,7 @@ class IOrgSiteService:
         self.region_service = RegionService()
         self.requests = RequestService()
         self.rel_service = ISiteCategoryRelService()
+        self.emission_service = IEmissionDataService()
 
 
     @catch_errors_decorator
@@ -380,7 +381,7 @@ class IOrgSiteService:
         return source
 
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
-        request_addr = site.streetAddress or site.landAddress
+        request_addr = site.streetAddress if site.streetAddress.strip() else site.landAddress
         request_addr = request_addr.strip()
         request_addr = fix_address_string(request_addr)
         response = await self.requests.request(
@@ -593,7 +594,7 @@ class IOrgSiteService:
             for site in sites:
                 rels = await self.update_relation_single(site=site)
                 if rels:
-                    await self.rel_service.calculate_emissions(rels)
+                    await self.emission_service.calculate_emissions(rels)
                 pbar.update(1)
         
         pbar.close()
@@ -613,7 +614,7 @@ class IOrgSiteService:
             rel = await self.update_relation_single(site=site)
             await self.populate_single_address(site=site)
             if rel:
-                await self.rel_service.calculate_emissions(rel)
+                await self.emission_service.calculate_emissions(rel)
 
     async def update_relations_alt(self)-> None:
         """
