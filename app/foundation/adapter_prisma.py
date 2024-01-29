@@ -72,3 +72,9 @@ class PrismaAdapter:
             except:
                 raise ValueError(f"Cannot convert {arg} to list")
         return {key: True for key in arg}
+
+    def to_sort_object(self, sort: str):
+        if not sort:
+            return
+        _sort_list = sort.split(",")
+        return [{value.split(':')[0]: value.split(':')[1] } for value in _sort_list] 
