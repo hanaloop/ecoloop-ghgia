@@ -81,3 +81,9 @@ def get_regions_as_tuple(structured_address: str):
     region1.strip()
     region2.strip()
     return region1, region2
+
+def string_to_dict(test_str: str, sep:str):
+    if sep not in test_str:
+        return test_str
+    key, val = test_str.split(sep, 1)
+    return {key: string_to_dict(val, sep)}
