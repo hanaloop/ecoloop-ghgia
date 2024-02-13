@@ -7,15 +7,6 @@ class ISiteCategoryRelService:
     def __init__(self):
         self.prisma = get_connection()
 
-    async def delete_all(self) -> int:
-        """
-        Deletes all records in the 'ISiteCategoryRel' table.
-
-        Returns:
-            int: The number of deleted records.
-        """
-        return await self.prisma.isitecategoryrel.delete_many()
-
     @catch_errors_decorator
     async def delete_many(self, where: prisma.types.ISiteCategoryRelWhereInput) -> int:
         """

@@ -19,12 +19,6 @@ class CodeService:
         self.emission_service = IEmissionDataService()
         self.logger = logging.getLogger(__name__)
 
-      
-    async def delete_all(self):
-        """
-        Deletes all records in the 'Code' table.
-        """
-        return await self.prisma.code.delete_many()
 
     async def update_or_create(
         self,
@@ -249,7 +243,7 @@ class CodeService:
         data_to_upload = df.to_dict(orient="records")
         for i, row in enumerate(data_to_upload):
             data_to_upload[i] = cast_dict_to_types(row, model_annotation)
-        await self.create_many(data=data_to_upload)
+        return await self.create_many(data=data_to_upload)
 
     async def link_emissions_to_codes(self):
         emission_data = await self.emission_service.fetch_many()

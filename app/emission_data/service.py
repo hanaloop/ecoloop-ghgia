@@ -38,11 +38,6 @@ class IEmissionDataService:
         self.rel_service = ISiteCategoryRelService()
         self.logger = logging.getLogger(__name__)
 
-    async def delete_all(self):
-        """
-        Deletes all records in the 'IEmissionData' table.
-        """
-        await self.prisma.iemissiondata.delete_many()
 
     async def update_or_create(
         self,

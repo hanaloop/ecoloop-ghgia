@@ -127,13 +127,19 @@ scripts/script_import_emission_data.py (Gir1)-> time taken = 10 minutes
 scripts/script_import_ets.py -> time taken = ~1 minute
 scripts/link_emissions_to_codes.py -> time taken = 10 minutes
 scripts/script_calculate_emissions.py -> time taken = 1 minute per year requested
+```
 
 Each script can be run by typing:
-python <name_of_script.py> --<expected_arg1> <value> --<expected_arg2> <value2>
+```python <name_of_script.py> --<expected_arg1> <value> --<expected_arg2> <value2>```
 
 Usage instructions and accepted params can be shown by running <name_of_script.py> --help
 
-An sample shell script on how to run the data can be found in the root folder.
+A sample shell script on how to run the data can be found in the root folder.
+
+Optional: You can generate pickles needed for the tests, by running:
+```
+python scripts/script_generate_pickles.py
+```
 
 !!!Important!!!
 

@@ -14,7 +14,7 @@ async def setup_db():
     db_connection = get_connection()
     await db_connection.connect()
     yield
-    await service.delete_all()
+    await db_connection.code.delete_many()
     
     await db_connection.disconnect()
 

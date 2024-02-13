@@ -23,14 +23,12 @@ adapter = PrismaAdapter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/iemissiondata-count")
-@router.get("/iemissiondata-count")
+@router.get("/iemissiondata-count/")
 async def count():
     return await service.fetch_count()
 
 
-@router.get("/iemissiondata-group")
-@router.get("/iemissiondata-group")
+@router.get("/iemissiondata-group/")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
@@ -50,7 +48,7 @@ async def search(request: Request):
     return response
 
 
-@router.get("/iemissiondata/{uid}")
+@router.get("/iemissiondata/{uid}/")
 async def get_by_id(uid: str):
     return await service.fetch_many(where={"uid": uid})
 
@@ -103,7 +101,7 @@ async def create(request: Request):
         raise HTTPException(status_code=400, detail="Site already exists")
 
 
-@router.put("/iemissiondata/{uid}")
+@router.put("/iemissiondata/{uid}/")
 async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IEmissionData.model_fields)

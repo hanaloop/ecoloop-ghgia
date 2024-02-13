@@ -15,15 +15,15 @@ adapter = PrismaAdapter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/iorganizations-count")
+@router.get("/iorganizations-count/")
 async def count():
     return await service.fetch_count()
 
-@router.get("/iorganizations/{uid}")
+@router.get("/iorganizations/{uid}/")
 async def get_by_id(uid: str):
     return await service.fetch_many(where={"uid": uid})
 
-@router.get("/iorganizations-group")
+@router.get("/iorganizations-group/")
 async def group(count=None, by=None, sum=None, order=None, having=None):
     return await service.group_by(
         count=count, by=by, sum=sum, order=order, having=having
@@ -70,19 +70,19 @@ async def create(request: Request):
         raise HTTPException(status_code=400, detail="Bad request")
        
 
-@router.put("/iorganizations/{uid}")
+@router.put("/iorganizations/{uid}/")
 async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrganization.model_fields)
     body = cast_dict_to_types(body, field_types)
     return await service.update(where={"uid": uid}, data=body)
 
-@router.delete("/iorganizations/{uid}")
+@router.delete("/iorganizations/{uid}/")
 async def delete(uid):
     return await service.delete(where={"uid": uid})
 
 
-@router.post("/iorganizations-upload")
+@router.post("/iorganizations-upload/")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_organizations(data_source=data_source, buffer=file.file)

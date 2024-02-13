@@ -22,8 +22,8 @@ async def setup_db():
     db_connection = get_connection()
     await db_connection.connect()
     yield   # This is where the test function will execute
-    await service.delete_all()
-    await rel_service.delete_all()
+    await db_connection.iorgsite.delete_many()
+    await db_connection.isitecategoryrel.delete_many()
     await db_connection.disconnect()
 
 # @pytest_asyncio.fixture
