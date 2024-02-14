@@ -23,10 +23,8 @@ class PrismaAdapter:
         if not query:
             return
         for key, prop in query.items():
-            if key and key.startswith("_"):
+            if key and key.startswith("_") or not prop or prop == "":
                 continue
-            if prop == "":
-                prop = None
             if len(key.split(":")) == 2:
                 field, operator = key.split(":")
                 if prop and len(prop.split(",")) > 1 or operator == "in":
