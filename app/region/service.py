@@ -5,12 +5,6 @@ from app.database import get_connection
 class RegionService:
     def __init__(self):
         self.prisma = get_connection()
-    
-    async def delete_all(self):
-        """
-        Deletes all records in the 'Region' table.
-        """
-        return await self.prisma.region.delete_many()
 
     async def update_or_create(
         self,

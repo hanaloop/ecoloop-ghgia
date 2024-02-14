@@ -50,7 +50,7 @@ async def get(request: Request):
         where=query_args, take=query_args.take, skip=query_args.take * query_args.page, include=include
     )
 
-@router.get("/iorgsites/{uid}")
+@router.get("/iorgsites/{uid}/")
 async def get_by_id(uid: str):
     return await service.fetch_many(where={"uid": uid})
 
@@ -94,19 +94,21 @@ async def create(request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
 
-@router.put("/iorgsites/{uid}")
+@router.put("/iorgsites/{uid}/")
 async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)
     return await service.update(where={"uid": uid}, data=body)
 
-@router.delete("/iorgsites/{uid}")
+@router.delete("/iorgsites/{uid}/")
 async def delete(uid):
     return await service.delete_site(uid=uid)
 
 @router.put("/iorgsite/{orgUid}/")
 async def update_site_organization(request: Request, orgUid: str = None):
+    if orgUid == "undefined" or orgUid == "null":
+        orgUid = None
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)

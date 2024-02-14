@@ -16,7 +16,7 @@ async def get():
 async def count():
     return await service.fetch_count()
 
-@router.get("/region/paged")
+@router.get("/region.paged/")
 async def paged(skip: int = 0, limit: int = 10):
     return await service.fetch_paged(skip=skip, take=limit)
 

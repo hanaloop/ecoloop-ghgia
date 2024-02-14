@@ -14,12 +14,6 @@ class IOrganizationService:
     def __init__(self):
         self.prisma = get_connection()
 
-    @catch_errors_decorator
-    async def delete_all(self):
-        """
-        Deletes all records in the 'IOrganization' table.
-        """
-        return await self.prisma.iorganization.delete_many()
 
     @catch_errors_decorator
     async def update_or_create(

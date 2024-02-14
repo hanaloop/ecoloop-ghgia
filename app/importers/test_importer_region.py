@@ -13,7 +13,7 @@ async def setup_db():
     pytest.MonkeyPatch().setenv("DATABASE_URL", test_db_url)
     await get_connection().connect()
     yield   # This is where the test function will execute
-    await RegionService().delete_all()
+    await get_connection().region.delete_many()
     await get_connection().disconnect()
 
 @pytest.mark.asyncio

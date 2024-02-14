@@ -36,14 +36,8 @@ class IOrgSiteService:
         self.requests = RequestService()
         self.rel_service = ISiteCategoryRelService()
         self.emission_service = IEmissionDataService()
+        self.files = FileUtils()
 
-
-    @catch_errors_decorator
-    async def delete_all(self):
-        """
-        Deletes all records in the 'iorgsite' table.
-        """
-        return await self.prisma.iorgsite.delete_many()
 
     @catch_errors_decorator
     async def update_or_create(
@@ -355,7 +349,7 @@ class IOrgSiteService:
         Returns:
             The list of upserted data.
         """
-        source = await self.prepare_data(buffer, path)
+        source = await self.prepare(buffer, path)
         returned_data = []
         field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
         # Reason I iterate through the index although it is not used, is because otherwise iterrows returns a tuple,
@@ -368,13 +362,14 @@ class IOrgSiteService:
         await self.update_relations_alt()
         return returned_data
 
-    async def prepare_data(self, buffer: Buffer = None, path: str = None):
+    async def prepare(self, buffer: Buffer = None, path: str = None):
         if buffer and not path:
             data_source = "web"
         elif path and not buffer:
             data_source = os.path.basename(path)
+        file_type = self.files.get_file_extension(path or buffer)
         files = FileUtils()
-        source = await files.read_to_pd(data_source, file=buffer, path=path)
+        source = await files.read_to_pd(file_type=file_type, file=buffer, path=path)
         source = self.transform_data(source)
         source["dataSource"] = data_source
         source["keyHash"] = source.apply(lambda row: self.hash_row(row), axis=1)
@@ -647,8 +642,9 @@ class IOrgSiteService:
     async def delete_site(self, uid: str) -> Tuple[int, prisma.models.IOrgSite]:
         deleted_site = await self.prisma.iorgsite.delete(where={"uid": uid},include={"organization": True})
         if deleted_site:
-            site_count = await self.prisma.iorgsite.count(where={"organizationUid": deleted_site.organizationUid})
-            await self.prisma.iorganization.update(where={"uid": deleted_site.organizationUid}, data={"linkedSitesNumber": site_count})
+            if deleted_site.organizationUid:
+                site_count = await self.prisma.iorgsite.count(where={"organizationUid": deleted_site.organizationUid})
+                await self.prisma.iorganization.update(where={"uid": deleted_site.organizationUid}, data={"linkedSitesNumber": site_count})
             return deleted_site
 
     async def update_site(self, orgUid: str | None, data: prisma.models.IOrgSite) -> prisma.models.IOrgSite:

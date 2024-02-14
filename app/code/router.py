@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["code"],
 )
 
-@router.get("/code-count")
+@router.get("/code-count/")
 async def count():
     return await service.fetch_count()
 
@@ -44,11 +44,11 @@ async def get(request: Request):
     )
 
 
-@router.get("/code-group")
+@router.get("/code-group/")
 async def group(count=None, by = None, sum = None, order = None, having = None):
     return await service.group_by(count = count, by = by, sum = sum, order = order, having = having)
 
-@router.get("/code/{uid}")
+@router.get("/code/{uid}/")
 async def get_by_id(uid):
     return await service.fetch_many(where={"uid": uid})
 
@@ -71,7 +71,7 @@ async def create(request: Request):
         logger.error(e)
         raise HTTPException(status_code=400, detail="Site already exists") from e
 
-@router.post("/upload")
+@router.post("/upload/")
 async def upload(file: UploadFile):
     data_source = file.filename
     return await service.upload_data(data_source=data_source, buffer=file.file)
