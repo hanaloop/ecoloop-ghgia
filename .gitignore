@@ -11,3 +11,4 @@ app/.*
 
 .vscode/launch.json
 **.env
+**.env-*

@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 EL_IMAGE_NAMESPACE=ecoloop-platform/
-EL_IMAGE_NAME=ecoloop-ml${VARIATION}
+EL_IMAGE_NAME=ecoloop-ghgia${VARIATION}
 # GitLab
 # DOCKER_REGISTRY=registry.gitlab.com
 # REGISTRY_NAMESPACE=${DOCKER_REGISTRY}/hanaloop/sustainability/ecoloop-platform
@@ -42,7 +42,7 @@ if [ -z "$DOCKERFILE" ]; then
 fi
 
 if [ -z "${EL_IMAGE_TAG}" ]; then
-  EL_IMAGE_TAG=0.8.7
+  EL_IMAGE_TAG=0.1.0
   echo "EL_IMAGE_TAG setting to default ${EL_IMAGE_TAG}"
 fi
 
@@ -51,7 +51,7 @@ EL_IMAGE_FULL_NAME=${EL_IMAGE_NAMESPACE}${EL_IMAGE_NAME}
 if [ "$DO_BUILD" = "T" ]; then
   echo "Building ${EL_IMAGE_FULL_NAME}"
 
-  # docker build -t hanaloop/ecoloop-ml:0.1 -f .
+  # docker build -t hanaloop/ecoloop-ghgia:0.1 -f .
   docker build -t ${EL_IMAGE_FULL_NAME}:${EL_IMAGE_TAG} . -f ${DOCKERFILE}
   docker tag ${EL_IMAGE_FULL_NAME}:${EL_IMAGE_TAG} ${EL_IMAGE_FULL_NAME}:latest
 fi
