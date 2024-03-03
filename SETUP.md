@@ -59,7 +59,19 @@ The application requires Postgres database. It can be started using docker compo
   docker compose up
   ```
 
-## Migrating Prisma
+## Migrating DB with Prisma
+
+The application uses [Prisma](https://www.prisma.io/) as the ORM (Data adapter). Prisma comes with its own schema definition language and db migration tool.
+
+**To create sync schema with DB (Dev mode)** 
+
+This method bypasses the creation of migration file (that should be checked in the repo), and applying it, shortening the cycle.
+
+  ```sh
+  prisma db push
+  ```
+
+For production, use the migration file generation method below. 
 
 **To create a new migration file** after extending or modifying `prsima/schema.prisma`
 
@@ -73,18 +85,20 @@ The application requires Postgres database. It can be started using docker compo
   prisma migrate deploy
   ```
 
-# Running the server
+## Running the server
 
-Once 
+Once the tables are created with through the DB migration process, you can now run the server.
 
 * Run server
 
   ```bash
   uvicorn app.main:app --reload --port 9091
   ```
+
 * Run tests
 
   ```bash
   [root]$ python3 -m pytest
   ```
+
 * Usage

@@ -57,9 +57,18 @@ You can ingest iorgsites data using the ``/api/iorgsites/upload`` endpoint.
 The data can also be read from a local file by providing a path to the file. 
 
 
-## Seeding the initial data and calculating the emissions
+## Seeding lookup data, ingesting data and calculating the emissions
 
-GHGIA db requires initialization with seed data using the command line
+When GHGIA is started for the first time, the database is empty, and it needs to be seeded before it can function properly. There is a command line script that seeds and ingests the db with the following data:
+
+1. Code - Codes of IPCC (Source/Sink) Categories used in the system
+2. Region - Countries and Korea province and districts
+3. Sites  - Factories
+4. Organizations -
+5. GIR Emission data
+6. GIR emission data
+
+After seeding and ingesting data, the emission distribution is calculated.
 
 ```sh
 # The scripts should be run in the following order:
