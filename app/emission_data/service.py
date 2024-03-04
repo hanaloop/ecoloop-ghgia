@@ -298,7 +298,7 @@ class IEmissionDataService:
             year_end = "2020-01-01T00:00:00.000Z"
         gir_4_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:orig:gir-db4",
+                "source": "calc:gir-db4",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
@@ -309,7 +309,7 @@ class IEmissionDataService:
 
         gir_1_calc = await self.prisma.iemissiondata.find_many(
             where={
-                "source": "calc:orig:gir-db1",
+                "source": "calc:gir-db1",
                 "regionUid": {"not": None},
                 "periodStartDt": {"gte": year_start},
                 "periodEndDt": {"lte": year_end},
