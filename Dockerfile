@@ -6,7 +6,7 @@
 ###############################################
 # Base Image
 ###############################################
-FROM python:3.9-slim as python-base
+FROM python:3.11.8-slim as python-base
 
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
@@ -15,7 +15,7 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
     # https://python-poetry.org/docs/configuration/#using-environment-variables
-    POETRY_VERSION=1.1.15  \
+    POETRY_VERSION=1.6.1  \
     POETRY_HOME="/opt/poetry" \
     # make poetry create the virtual environment in the project's root
     # it gets named `.venv`
@@ -41,19 +41,29 @@ RUN curl -sSL https://install.python-poetry.org | python3
 
 # Copy project requirement files.
 WORKDIR $PYSETUP_PATH
-COPY poetry.lock pyproject.toml ./
+COPY poetry.lock pyproject.toml wait-for.sh ./
+COPY ./app ./app
+COPY ./scripts ./scripts
 
 # Install runtime dependencies. uses $POETRY_VIRTUALENVS_IN_PROJECT internally
-RUN poetry install --no-dev
+RUN poetry install --only main
 
 ###############################################
 # Production Image
 ###############################################
 FROM python-base as production
+RUN apt-get -qy update \
+    && apt-get -qy install --no-install-recommends openssl netcat-traditional curl build-essential
 
+ENV PYSETUP_PATH="/opt/pysetup" \
+    VENV_PATH="/opt/pysetup/.venv" 
+
+WORKDIR $PYSETUP_PATH
 # COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
-COPY ./app /app/
+COPY ./prisma ./prisma
+RUN pip install prisma
+RUN prisma generate
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9090"]
 EXPOSE 9090

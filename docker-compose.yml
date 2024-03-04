@@ -1,4 +1,4 @@
-version: "3"
+version: "3.7"
 
 # volumes:
 #   database:
@@ -13,18 +13,52 @@ volumes:
 services:
   postgres:
     image: postgres:16.1-alpine3.18
-    container_name: postgres-kcp
+    container_name: postgres-ghgia
     # command: postgres -c 'max_connections=200' -c 'shared_buffers=256MB'
     networks:
       - webnet
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       # POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C.UTF-8 --lc-ctype=C.UTF-8' COMMENTED OUT AS prisma db:migrate is failing (maybe since pg 15 ??)
       POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
-      PG_DATA: /var/lib/postgresql/data_kcp
+      PG_DATA: /var/lib/postgresql/data_ghgia
     ports:
-      - 5431:5432
+      - 5432:5432
     volumes:
-      - pgdata:/var/lib/postgresql/data_kcp
+      - pgdata:/var/lib/postgresql/data_ghgia
+
+  ecoloop-ghgia-migrate:
+    image: ${ECOLOOP_GHGIA_IMAGE}
+    container_name: ecoloop-ghgia-migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE_NAME: ${DB_DATABASE_NAME}
+      KAKAO_API_KEY: ${KAKAO_API_KEY}
+      KAKAO_API_BURL: ${KAKAO_API_BURL}
+    command: >
+      sh -c "./wait-for.sh postgres:5432 -- prisma db push"
+    depends_on:
+      - postgres
+    networks:
+      - webnet
+
+  ecoloop-ghgia:
+    image: ${ECOLOOP_GHGIA_IMAGE}
+    container_name: ecoloop-ghgia
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE_NAME: ${DB_DATABASE_NAME}
+      KAKAO_API_KEY: ${KAKAO_API_KEY}
+      KAKAO_API_BURL: ${KAKAO_API_BURL}
+    depends_on:
+      - ecoloop-ghgia-migrate
+    ports:
+      - 9091:9090
+    networks:
+      - webnet
