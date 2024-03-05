@@ -44,11 +44,15 @@ async def get_paged(request: Request):
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
     include = query_params.get("_include", None)
+    _sort = query_params.get("_sort", None)
+    sort = adapter.to_sort_object(_sort)
+
     content = await service.fetch_paged(
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
         include=include,
+        order=sort
     )  ##TODO: Group these to a single query
     if content is None:
         content = []
@@ -61,7 +65,7 @@ async def get_paged(request: Request):
 @router.post("/iorganizations/")
 async def create(request: Request):
     body = await request.json()
-    field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
+    field_types = model_fields_into_type_map(prisma.models.IOrganization.model_fields)
     body = cast_dict_to_types(body, field_types)
     try:
         return await service.create(data=body)

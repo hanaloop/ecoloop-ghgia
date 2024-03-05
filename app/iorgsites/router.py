@@ -90,7 +90,7 @@ async def create(request: Request):
     body_as_series = body_as_pd.iloc[0]
     body_as_series["keyHash"] = service.hash_row(row=body_as_series)
     try:
-        return await service.create(data=body_as_series.to_dict())
+        return await service.create(data=body_as_series.to_dict(),)
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
 
