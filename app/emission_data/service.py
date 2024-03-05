@@ -583,7 +583,7 @@ class IEmissionDataService:
                 "pollutantId": "tCO2eq",
                 "organizationUid": data["uid"],
             },
-            where={"organizationUid": data["uid"], "periodStartDt": period_start_dt, "periodEndDt": period_end_dt, "source": data["source"]},
+            where={"organizationUid": data["uid"], "periodStartDt": period_start_dt, "periodEndDt": period_end_dt, "source": data["source"], "site": None},
         )
 
     async def export_region_groupped(       
