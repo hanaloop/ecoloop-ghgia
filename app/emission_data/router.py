@@ -69,6 +69,8 @@ async def get_paged(request: Request):
     query_args = adapter.to_query_args(query=query_params)
     page_size = int(query_params["_pageSize"])
     page_num = int(query_params["_pageNum"])
+    _sort = query_params.get("_sort", None)
+    sort = adapter.to_sort_object(_sort)
     include = (
         adapter.to_include_exclude_args(query_params["_include"])
         if "_include" in query_params
@@ -78,6 +80,7 @@ async def get_paged(request: Request):
         where=query_args,
         take=page_size,
         skip=page_size * page_num,
+        order=sort,
         include=include,
     )  ##TODO: Group these to a single query
     if content is None:

@@ -546,6 +546,7 @@ class IEmissionDataService:
                 else 0
             )
             emission = {
+                "organizationUid": iorg.uid,
                 "periodStartDt": period_start_dt,
                 "periodEndDt": period_end_dt,
                 "emissionTotal": data["emissionTotal"] * ratio if data["emissionTotal"] else 0,
@@ -580,6 +581,7 @@ class IEmissionDataService:
                 "periodLength": "1Y",
                 "source": data["source"],
                 "pollutantId": "tCO2eq",
+                "organizationUid": data["uid"],
             },
             where={"organizationUid": data["uid"], "periodStartDt": period_start_dt, "periodEndDt": period_end_dt, "source": data["source"]},
         )

@@ -34,7 +34,7 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 ###############################################
 FROM python-base as builder-base
 RUN apt-get -qy update \
-    && apt-get -qy install --no-install-recommends openssl netcat curl build-essential
+    && apt-get -qy install --no-install-recommends openssl netcat-traditional curl build-essential
 
 # Install poetry
 RUN curl -sSL https://install.python-poetry.org | python3
