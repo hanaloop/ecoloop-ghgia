@@ -59,7 +59,7 @@ class PrismaAdapter:
         )
         return response
 
-    def to_include_exclude_args(self, arg: list):
+    def to_include_exclude_args(self, arg: str):
         """
         Generate a dictionary with each element in the input list as a key and set its value to True.
 
@@ -69,14 +69,15 @@ class PrismaAdapter:
         Returns:
             dict: A dictionary with each element in the input list as a key and True as its value.
         """
-        if not arg:
+        arg_list = arg.split(",")
+        if not arg_list:
             return
-        if not isinstance(arg, list):
+        if not isinstance(arg_list, list):
             try:
-                arg = [arg]
+                arg_list = [arg_list]
             except:
-                raise ValueError(f"Cannot convert {arg} to list")
-        return {key: True for key in arg}
+                raise ValueError(f"Cannot convert {arg_list} to list")
+        return {value: True for value in arg_list}
 
     def to_sort_object(self, sort: str):
         if not sort:

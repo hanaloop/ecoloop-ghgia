@@ -376,7 +376,7 @@ class IOrgSiteService:
         return source
 
     async def get_site_structured_address(self, site: prisma.models.IOrgSite) -> tuple:
-        request_addr = site.streetAddress if site.streetAddress.strip() else site.landAddress
+        request_addr = site.landAddress if site.landAddress else site.landAddress
         request_addr = request_addr.strip()
         request_addr = fix_address_string(request_addr)
         response = await self.requests.request(
@@ -534,7 +534,7 @@ class IOrgSiteService:
             site = await self.prisma.iorgsite.find_unique(where={"uid": uid})
 
         if site.sectorIds and site.sectorIdMain:
-            proxy_field = site.buildingArea #This is just for comparison purposes, change to manufacturingFacilityArea
+            proxy_field = site.manufacturingFacilityArea #This is just for comparison purposes, change to manufacturingFacilityArea
             if proxy_field <= 0:
                 logging.warn(f"Skipping {uid} as proxy field is <= 0")
                 return

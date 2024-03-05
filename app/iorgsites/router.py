@@ -87,10 +87,10 @@ async def create(request: Request):
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
     body = cast_dict_to_types(body, field_types)
     body_as_pd = pd.DataFrame(body, index=[0])
-    body_as_series = body_as_pd.iloc[0]
+    body_as_series = body_as_pd.iloc[0].copy()
     body_as_series["keyHash"] = service.hash_row(row=body_as_series)
     try:
-        return await service.create(data=body_as_series.to_dict(),)
+        return await service.add_site(site=body_as_series.to_dict(),)
     except Exception as e:
         raise HTTPException(status_code=400, detail="Site already exists")
 
@@ -98,8 +98,8 @@ async def create(request: Request):
 async def update(request: Request, uid: str):
     body = await request.json()
     field_types = model_fields_into_type_map(prisma.models.IOrgSite.model_fields)
-    body = cast_dict_to_types(body, field_types)
-    return await service.update(where={"uid": uid}, data=body)
+    body_update = cast_dict_to_types(body, field_types)
+    return await service.update(where={"uid": uid}, data=body_update)
 
 @router.delete("/iorgsites/{uid}/")
 async def delete(uid):
