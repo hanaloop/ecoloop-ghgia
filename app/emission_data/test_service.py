@@ -56,6 +56,7 @@ async def test_create_org_emission_one_site_zero_area(mocker):
         "emissionIndirect": 0,
         "longitude": None,
         "latitude": None,
+        "organizationUid": "org_uid",
         "regionUid": None,
         "regionName": None,
         "source": "source",
