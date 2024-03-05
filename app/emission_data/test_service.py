@@ -45,7 +45,7 @@ async def test_create_org_emission_one_site_zero_area(mocker):
         "energyTotal": 100,
     }
     site = {
-        "manufacturingFacilityArea": 0,
+        "manufascturingFacilityArea": 0,
         "uid": "site_uid"
     }
     expected_data = {
@@ -114,6 +114,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
         "emissionIndirect": 0,
         "longitude": None,
         "latitude": None,
+        "organizationUid": "org_uid",
         "regionUid": None,
         "regionName": None,
         "source": "source",
@@ -133,6 +134,7 @@ async def test_create_org_emission_one_site_non_zero_area(mocker):
         "emissionIndirect": 0,
         "longitude": None,
         "latitude": None,
+        "organizationUid": "org_uid",
         "regionUid": None,
         "regionName": None,
         "source": "source",
